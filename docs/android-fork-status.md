@@ -22,30 +22,51 @@ App Settings → Find my AirPods provides:
 
 No background location permission, Apple account login, or Find My network is used.
 
-## Not implemented: heart-rate monitoring
+## Experimental heart rate and microphone
 
-Upstream marks AirPods Pro 3 as HRM-capable, but supplies no verified heart-rate
-transport or decoder. The capability bit is not a heart-rate implementation.
-Do not display synthesized BPM or decode arbitrary protocol bytes as measurements.
+App Settings → AirPods experiments now provides two explicit foreground tests:
 
-Next requirement: a consented Bluetooth trace from the owner's AirPods Pro 3 and
-an Apple device, with matching observed heart-rate readings, to establish the
-activation command and measurement transport. See upstream issue 308:
-https://github.com/librepods-org/librepods/issues/308
+- Heart rate: negotiates the RTBuddy heart-rate service, starts a one-second
+  sample stream, and displays accepted BPM values. It rejects malformed frames,
+  acknowledgements, duplicates, warm-up samples and low-quality samples. Readings
+  clear after four seconds without an accepted sample. Startup retries are bounded;
+  initial connection can take about a minute. Wear at least one AirPod Pro 3.
+- Microphone: requests the AACP high-resolution microphone stream and decodes
+  AAC-ELD through Android MediaCodec. A ten-second PCM WAV sample can be played
+  or explicitly shared. The actual decoder output sample rate is shown. Music
+  may remain playing to test concurrent A2DP playback. Conversation awareness
+  pauses during capture and its prior setting is restored on the same connection.
 
-## Not implemented: high-quality two-way call audio
+Both tests stop when leaving the screen. Microphone permission is requested before
+recording. Audio stays in private app cache unless explicitly shared; starting a
+new recording replaces the prior sample. Audio and RTBuddy packets bypass normal
+raw-packet logging and broadcasts. No health data is uploaded or exported to
+Health Connect. Heart-rate quality interpretation is experimental and is not
+validated for medical use.
 
-Ordinary Bluetooth call routing continues to be controlled by Android and the
-calling app. Upstream describes Apple's high-quality microphone path as AACP
-alongside A2DP. LibrePods has no decoder or Android audio input integration for
-that stream. This cannot be supplied by a UI toggle or by merely choosing AAC.
+Protocol work is adapted from GPL-licensed upstream contributions:
 
-Next requirements: verified stream negotiation, codec/framing and decoding,
-then an Android input path usable by phone/video-call apps. System/root-level
-integration may be necessary. Standard LE Audio only helps when both endpoints
-actually expose a compatible audio profile; Bluetooth version alone is not proof.
+- thibaup, [PR 702](https://github.com/librepods-org/librepods/pull/702),
+  revision `4d27253b910c10fe86b50fc491ff2331086e3b1e`: RTBuddy transport/parser.
+- IvanChanPing, [PR 723](https://github.com/librepods-org/librepods/pull/723),
+  revision `5afad4dc4de5016a57c1e521b27d044d2e738047`: Android AAC-ELD framing/decoder.
+- [PR 655](https://github.com/librepods-org/librepods/pull/655): Linux microphone
+  experiments and concurrent playback findings.
 
-Source: https://github.com/librepods-org/librepods#high-quality-two-way-audio
+These are experimental upstream contributions, not a guarantee of compatibility
+with this phone or firmware. Local tests cover parsing and filtering; there is no
+connected phone here to validate sensor readings, decoder availability or sound.
+
+## Remaining: high-quality audio in phone/video calls
+
+The microphone test does not expose its PCM stream as an Android system input.
+Phone, WhatsApp and other video-call apps still use Android's existing Bluetooth
+call routing. A separate privileged audio-routing/HAL integration or cooperation
+from the calling app is required. Root status and device-specific feasibility
+must be established before attempting that integration. Choosing AAC for media
+playback alone does not change the call microphone.
+
+See [upstream issue 720](https://github.com/librepods-org/librepods/issues/720).
 
 ## Build
 
@@ -54,14 +75,16 @@ This workspace has Java 21 and Android command-line tools installed at
 Source `/home/codex/.config/librepods/android-env.sh`, then run from `android`:
 
 ```sh
-./gradlew assembleFossDebug --max-workers=2 -Dorg.gradle.jvmargs='-Xmx3g -Dfile.encoding=UTF-8'
+./gradlew assembleFossDebug testFossDebugUnitTest --max-workers=2 -Dorg.gradle.jvmargs='-Xmx3g -Dfile.encoding=UTF-8'
 ```
 
 Test on physical AirPods Pro 3 before treating finding/ringing as verified.
 
 ## Validation limits
 
-The FOSS debug APK builds successfully and its APK signature verifies. No Android
+The FOSS debug APK builds successfully. All 14 local unit tests pass, covering
+RTBuddy parsing, malformed inputs, service selection, sample filtering, AAC-ELD
+packet framing and WAV generation. No Android
 phone is attached to this workspace, so connection, ringing, and location behavior
 still require testing on the owner's device. Full-project lint is not clean:
 existing upstream findings include API-level compatibility, widget tint checks,

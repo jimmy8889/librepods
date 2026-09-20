@@ -154,6 +154,8 @@ object ServiceManager {
 class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeListener {
     var macAddress = ""
     var localMac = ""
+    lateinit var experiments: me.kavishdevar.librepods.experimental.AirPodsExperiments
+        private set
     lateinit var aacpManager: AACPManager
     lateinit var attManager: ATTManagerv2
     var airpodsInstance: AirPodsInstance? = null
@@ -380,6 +382,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         initializeConfig()
 
         aacpManager = AACPManager()
+        experiments = me.kavishdevar.librepods.experimental.AirPodsExperiments(this)
         initializeAACPManagerCallback()
 
         attManager = ATTManagerv2()
@@ -697,6 +700,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 //                    isConnectedLocally = false
                     popupShown = false
                     updateNotificationContent(false)
+                    experiments.disconnected()
                     aacpManager.disconnected()
                     BluetoothConnectionManager.aacpSocket = null
                     BluetoothConnectionManager.attSocket = null
@@ -1175,6 +1179,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
             override fun onCapabilitiesReceived(capabilities: List<Capability>) {
                 // TODO
+            }
+
+            override fun onHeartRateReceived(sample: me.kavishdevar.librepods.bluetooth.HeartRateSample) {
+                experiments.onHeartRate(sample)
             }
 
             override fun onUnknownPacketReceived(packet: ByteArray) {
@@ -2776,11 +2784,18 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                     while (socket.isConnected) {
                         try {
-                            val buffer = ByteArray(1024)
+                            val buffer = ByteArray(65535)
                             val bytesRead = it.inputStream.read(buffer)
                             var data: ByteArray
                             if (bytesRead > 0) {
                                 data = buffer.copyOfRange(0, bytesRead)
+                                // Biometric/audio payloads never enter broadcasts or packet logs.
+                                if (data.size >= 6 && data[4] == 0x58.toByte() && data[5] == 0.toByte()) {
+                                    experiments.onAudioPacket(data)
+                                    continue
+                                }
+                                val sensitive = aacpManager.receivePacket(data)
+                                if (sensitive) continue
                                 sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DATA).apply {
                                     putExtra("data", buffer.copyOfRange(0, bytesRead))
                                     setPackage(packageName)
@@ -2794,7 +2809,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                     batteryNotification.getBattery()
                                 )
 
-                                aacpManager.receivePacket(data)
 
                                 if (!isHeadTrackingData(data)) {
                                     Log.d("AirPodsData", "Data received: $formattedHex")
@@ -2806,6 +2820,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DISCONNECTED).apply {
                                     setPackage(packageName)
                                 })
+                                experiments.disconnected()
                                 aacpManager.disconnected()
                                 return@launch
                             }
@@ -2815,6 +2830,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                             sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DISCONNECTED).apply {
                                 setPackage(packageName)
                             })
+                            experiments.disconnected()
                             aacpManager.disconnected()
                             return@launch
                         }
@@ -2822,6 +2838,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     }
                     Log.d("AirPods Service", "socket closed")
 //                        isConnectedLocally = false
+                    experiments.disconnected()
                     aacpManager.disconnected()
                     updateNotificationContent(false)
                     sendBroadcast(Intent(AirPodsNotifications.AIRPODS_DISCONNECTED).apply {
@@ -2881,6 +2898,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             Log.e(TAG, "error closing aacp socket ${e.message}")
         }
 //        isConnectedLocally = false
+        experiments.disconnected()
         aacpManager.disconnected()
 
         BluetoothConnectionManager.aacpSocket = null
@@ -3107,6 +3125,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     @SuppressLint("MissingPermission")
     override fun onDestroy() {
+        if (::experiments.isInitialized) experiments.close()
         clearPacketLogs()
         Log.d(TAG, "Service stopped is being destroyed for some reason!")
 

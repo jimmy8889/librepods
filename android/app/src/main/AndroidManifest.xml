@@ -45,6 +45,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".LibrePodsApplication"
         android:allowBackup="true"
@@ -58,6 +60,7 @@
         android:theme="@style/Theme.LibrePods"
         android:description="@string/app_description"
         tools:ignore="UnusedAttribute" >
+        <activity android:name=".experimental.ExperimentsActivity" android:exported="false" />
         <activity android:name=".finding.FindAirPodsActivity" android:exported="false" />
         <receiver
             android:name=".presentation.widgets.NoiseControlWidget"

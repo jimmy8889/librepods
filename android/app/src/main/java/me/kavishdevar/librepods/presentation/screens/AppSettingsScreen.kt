@@ -193,6 +193,13 @@ fun AppSettingsScreen(
             enabled = state.isPremium
         )
 
+        StyledList(title = "AirPods experiments") {
+            StyledListItem(
+                name = "Heart rate and high-quality microphone",
+                onClick = { context.startActivity(Intent(context, me.kavishdevar.librepods.experimental.ExperimentsActivity::class.java)) }
+            )
+        }
+
         StyledList(title = "Find my AirPods") {
             StyledListItem(
                 name = "Find nearby or view last seen",
