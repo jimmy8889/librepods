@@ -193,6 +193,13 @@ fun AppSettingsScreen(
             enabled = state.isPremium
         )
 
+        StyledList(title = "Find my AirPods") {
+            StyledListItem(
+                name = "Find nearby or view last seen",
+                onClick = { context.startActivity(Intent(context, me.kavishdevar.librepods.finding.FindAirPodsActivity::class.java)) }
+            )
+        }
+
         if (state.connectionSuccessful) {
             StyledToggle(
                 title = stringResource(R.string.widget),

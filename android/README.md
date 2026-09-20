@@ -11,6 +11,9 @@ model and firmware. Select the desired options in the app after connecting;
 widgets can be added from the Android home-screen widget picker. Existing device
 preferences are preserved. The device/OS requirements below still apply.
 
+See [fork feature status and build instructions](../docs/android-fork-status.md)
+for the local finding tools and the remaining heart-rate/call-audio limitations.
+
 ## Root Requirement
 
 LibrePods *may* require root depending on your device/OS and what features you want access to:

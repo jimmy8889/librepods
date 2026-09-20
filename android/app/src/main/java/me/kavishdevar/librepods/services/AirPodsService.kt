@@ -685,6 +685,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                     Log.d(TAG, "Setting metadata")
                     setMetadatas(device!!)
 //                    isConnectedLocally = true
+                    me.kavishdevar.librepods.finding.LastSeenStore.record(this@AirPodsService, device!!.address)
                     macAddress = device!!.address
                     sharedPreferences.edit {
                         putString("mac_address", macAddress)
