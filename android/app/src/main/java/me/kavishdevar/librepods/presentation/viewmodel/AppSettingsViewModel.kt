@@ -32,7 +32,7 @@ data class AppSettingsUiState(
     val cameraPackageValue: String = "",
     val cameraPackageError: String? = null,
     val vendorIdHook: Boolean = false,
-    val isPremium: Boolean = false,
+    val isPremium: Boolean = !BuildConfig.PLAY_BUILD,
     val connectionSuccessful: Boolean = false,
     val showBottomSheetPopup: Boolean = true,
     val showIslandPopup: Boolean = true,
@@ -85,50 +85,53 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun loadSettings() {
-        // faulty update on Play caused PLAY_BUILD to be false and resulted in use of FOSS billing in Play. since FOSS is not verified, we need to give 2 weeks to verify the purchase
+        // Legacy purchase expiry applies only to Play builds.
+        if (BuildConfig.PLAY_BUILD) {
+            // faulty update on Play caused PLAY_BUILD to be false and resulted in use of FOSS billing in Play. since FOSS is not verified, we need to give 2 weeks to verify the purchase
 
-        val fossUpgraded = sharedPreferences.getBoolean("foss_upgraded", false)
-        val expiryTime = sharedPreferences.getLong("premium_expiry_time", 0L)
-        val now = System.currentTimeMillis()
+            val fossUpgraded = sharedPreferences.getBoolean("foss_upgraded", false)
+            val expiryTime = sharedPreferences.getLong("premium_expiry_time", 0L)
+            val now = System.currentTimeMillis()
 
-        when {
-            // existing temporary premium
-            expiryTime > 0L -> {
-                if (expiryTime <= now) {
+            when {
+                // existing temporary premium
+                expiryTime > 0L -> {
+                    if (expiryTime <= now) {
+                        sharedPreferences.edit {
+                            remove("premium_expiry_time")
+                            remove("foss_upgraded")
+                        }
+
+                        _uiState.update {
+                            it.copy(
+                                timeUntilFOSSPremiumExpiry = 0L,
+                                isPremium = false
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                timeUntilFOSSPremiumExpiry = expiryTime - now,
+                                isPremium = true
+                            )
+                        }
+                    }
+                }
+
+                // First migration from accidental FOSS Play build
+                fossUpgraded && !_uiState.value.isPremium && BuildConfig.PLAY_BUILD -> {
+                    val newExpiry = now + 28L * 24 * 60 * 60 * 1000
+
                     sharedPreferences.edit {
-                        remove("premium_expiry_time")
-                        remove("foss_upgraded")
+                        putLong("premium_expiry_time", newExpiry)
                     }
 
                     _uiState.update {
                         it.copy(
-                            timeUntilFOSSPremiumExpiry = 0L,
-                            isPremium = false
-                        )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            timeUntilFOSSPremiumExpiry = expiryTime - now,
+                            timeUntilFOSSPremiumExpiry = newExpiry - now,
                             isPremium = true
                         )
                     }
-                }
-            }
-
-            // First migration from accidental FOSS Play build
-            fossUpgraded && !_uiState.value.isPremium && BuildConfig.PLAY_BUILD -> {
-                val newExpiry = now + 28L * 24 * 60 * 60 * 1000
-
-                sharedPreferences.edit {
-                    putLong("premium_expiry_time", newExpiry)
-                }
-
-                _uiState.update {
-                    it.copy(
-                        timeUntilFOSSPremiumExpiry = newExpiry - now,
-                        isPremium = true
-                    )
                 }
             }
         }

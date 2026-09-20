@@ -1,3 +1,16 @@
+## This fork's Android builds
+
+Build the `foss` flavor (`./gradlew assembleFossDebug`) for this fork. All features behind the upgrade are available immediately, including conversation
+awareness, automatic connection, widget controls, advanced device settings,
+head gestures, long-press assistant actions, and customization options. No
+upgrade action is required, and access does not expire. Existing upgrade or
+trial preferences cannot relock features in the FOSS build.
+
+Conversation awareness and device settings still depend on the connected AirPods
+model and firmware. Select the desired options in the app after connecting;
+widgets can be added from the Android home-screen widget picker. Existing device
+preferences are preserved. The device/OS requirements below still apply.
+
 ## Root Requirement
 
 LibrePods *may* require root depending on your device/OS and what features you want access to:
