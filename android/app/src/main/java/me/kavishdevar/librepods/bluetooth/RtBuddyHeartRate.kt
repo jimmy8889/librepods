@@ -28,7 +28,8 @@ internal enum class HeartRateRejectionReason {
     UNRECOGNIZED_HEART_RATE_PAYLOAD,
     UNEXPECTED_PAYLOAD_LENGTH,
     OUT_OF_RANGE_READING,
-    UNKNOWN_SENSOR_STATUS
+    UNKNOWN_SENSOR_STATUS,
+    CONTROL_RESPONSE
 }
 
 internal data class HeartRateDecodeResult(
@@ -36,7 +37,8 @@ internal data class HeartRateDecodeResult(
     val relatedFrameCount: Int = 0,
     val rejectionReasons: Map<HeartRateRejectionReason, Int> = emptyMap(),
     val suppressRawLogging: Boolean = false,
-    val passthroughPackets: List<ByteArray> = emptyList()
+    val passthroughPackets: List<ByteArray> = emptyList(),
+    val rejectedPayloadLengths: Set<Int> = emptySet()
 ) {
     val rejectedFrameCount: Int
         get() = rejectionReasons.values.sum()
@@ -116,6 +118,7 @@ internal class RtBuddyHeartRateDecoder(
         val samples = mutableListOf<HeartRateSample>()
         val passthroughPackets = mutableListOf<ByteArray>()
         val rejectionReasons = mutableMapOf<HeartRateRejectionReason, Int>()
+        val rejectedPayloadLengths = mutableSetOf<Int>()
         var relatedFrameCount = 0
         var suppressRawLogging = carryWasSensitive
         var cursor = 0
@@ -168,6 +171,7 @@ internal class RtBuddyHeartRateDecoder(
                 if (classification.related) {
                     relatedFrameCount++
                     classification.rejectionReason?.let { rejectionReasons.increment(it) }
+                    rejectedPayloadLengths += classification.rejectedPayloadLengths
                     classification.sample?.let(samples::add)
                 }
                 suppressRawLogging = true
@@ -183,7 +187,8 @@ internal class RtBuddyHeartRateDecoder(
             relatedFrameCount = relatedFrameCount,
             rejectionReasons = rejectionReasons,
             suppressRawLogging = suppressRawLogging,
-            passthroughPackets = passthroughPackets
+            passthroughPackets = passthroughPackets,
+            rejectedPayloadLengths = rejectedPayloadLengths
         )
     }
 
@@ -230,7 +235,9 @@ internal class RtBuddyHeartRateDecoder(
         val acceptedPayload = payloads.firstOrNull(::isValidHeartRatePayload)
             ?: return FrameClassification(
                 related = true,
+                rejectedPayloadLengths = payloads.map { it.size }.toSet(),
                 rejectionReason = when {
+                    payloads.any { it.contentEquals(byteArrayOf(1,0x40,0x42,0x0f,0)) || it.contentEquals(byteArrayOf(1,0,0,0,0)) } -> HeartRateRejectionReason.CONTROL_RESPONSE
                     payloads.isEmpty() -> HeartRateRejectionReason.MISSING_HEART_RATE_PAYLOAD
                     payloads.none { it.size == HEART_RATE_PAYLOAD_LENGTH } -> HeartRateRejectionReason.UNEXPECTED_PAYLOAD_LENGTH
                     payloads.filter { it.size == HEART_RATE_PAYLOAD_LENGTH }.none {
@@ -513,7 +520,8 @@ internal class RtBuddyHeartRateDecoder(
         val related: Boolean = false,
         val consumed: Boolean = false,
         val sample: HeartRateSample? = null,
-        val rejectionReason: HeartRateRejectionReason? = null
+        val rejectionReason: HeartRateRejectionReason? = null,
+        val rejectedPayloadLengths: Set<Int> = emptySet()
     )
 
     private companion object {

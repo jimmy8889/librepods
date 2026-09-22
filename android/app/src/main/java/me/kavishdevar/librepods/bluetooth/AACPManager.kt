@@ -507,8 +507,12 @@ class AACPManager {
             parsedHeartSamples += heartRateResult.samples.size
             rejectedHeartFrames += heartRateResult.rejectedFrameCount
             if (heartRateResult.rejectionReasons.isNotEmpty()) {
-                lastHeartRejection = heartRateResult.rejectionReasons.keys.joinToString { it.name.lowercase() }
+                lastHeartRejection = heartRateResult.rejectionReasons.keys.joinToString { it.name.lowercase() } +
+                    "; payload bytes=" + heartRateResult.rejectedPayloadLengths.sorted().joinToString()
             }
+        }
+        if (heartRateResult.rejectedFrameCount > 0) {
+            Log.d(TAG, "Heart-rate response classification: ${heartRateResult.rejectionReasons.keys}; payload bytes=${heartRateResult.rejectedPayloadLengths.sorted()}")
         }
         recordHeartRateDecodeDiagnostics(heartRateResult)
         heartRateResult.samples.forEach { callback?.onHeartRateReceived(it) }

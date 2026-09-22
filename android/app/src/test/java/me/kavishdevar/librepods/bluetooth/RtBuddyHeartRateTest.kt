@@ -86,6 +86,7 @@ class RtBuddyHeartRateTest {
         val control = byteArrayOf(8,19,0x1a,5,1,0x40,0x42,0x0f,0)
         val result = decoder().feed(frame(byteArrayOf(8,1,0x10,1,0x42,control.size.toByte()) + control))
         assertTrue(result.samples.isEmpty())
-        assertEquals(1, result.rejectionReasons[HeartRateRejectionReason.UNEXPECTED_PAYLOAD_LENGTH])
+        assertEquals(1, result.rejectionReasons[HeartRateRejectionReason.CONTROL_RESPONSE])
+        assertEquals(setOf(5), result.rejectedPayloadLengths)
     }
 }
