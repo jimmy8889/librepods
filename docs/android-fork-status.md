@@ -108,3 +108,13 @@ ADB logs from the owner's initial test confirm rejected heart-rate-related
 responses, with no accepted samples. The follow-up diagnostics distinguish a
 non-measurement payload length, out-of-range reading, and unrecognized sensor
 status without logging the raw payload or weakening validation.
+
+Live ADB follow-up on 2026-09-22 (build `d0b8811`): the start request
+was written successfully to fallback service 19. The parser received two-byte
+payloads around start and stop, with no validated 18-byte measurement. The latest
+observed run stopped after about 22 seconds; earlier complete retry runs also
+produced no validated sample. This narrows the observed failure to activation,
+service selection or an unsupported response format; it does not establish that
+the accessory lacks HR support. Duplicate filtering was corrected independently
+and did not resolve the observed no-measurement behavior. The meaning of the
+two-byte responses remains unknown. Do not interpret them as BPM.
