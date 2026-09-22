@@ -74,6 +74,7 @@ class BLEManager(private val context: Context) {
         fun onDeviceDisappeared()
     }
 
+    private var scanning = false
     private var mBluetoothLeScanner: BluetoothLeScanner? = null
     private var mScanCallback: ScanCallback? = null
     private var airPodsStatusListener: AirPodsStatusListener? = null
@@ -113,9 +114,12 @@ class BLEManager(private val context: Context) {
     private val cleanupHandler = Handler(Looper.getMainLooper())
     private val cleanupRunnable = object : Runnable {
         override fun run() {
-            cleanupStaleDevices()
-            checkLidStateTimeout()
-            cleanupHandler.postDelayed(this, CLEANUP_INTERVAL_MS)
+            synchronized(this@BLEManager) {
+                if (!scanning) return
+                cleanupStaleDevices()
+                checkLidStateTimeout()
+                cleanupHandler.postDelayed(this, CLEANUP_INTERVAL_MS)
+            }
         }
     }
 
@@ -124,7 +128,10 @@ class BLEManager(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
+    @Synchronized
     fun startScanning() {
+        if (scanning) return
+        cleanupHandler.removeCallbacks(cleanupRunnable)
         try {
             Log.d(TAG, "Starting BLE scanner")
 
@@ -146,10 +153,12 @@ class BLEManager(private val context: Context) {
                 return
             }
 
-            mBluetoothLeScanner = btAdapter.bluetoothLeScanner
+            mBluetoothLeScanner = btAdapter.bluetoothLeScanner ?: return
 
             val scanSettings = ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                // This scan lives with the background service. Reserve high-duty scans for
+                // bounded foreground discovery; ordinary status updates can use low power.
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
                 .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
                 .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
                 .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
@@ -182,29 +191,40 @@ class BLEManager(private val context: Context) {
                 }
 
                 override fun onScanFailed(errorCode: Int) {
+                    synchronized(this@BLEManager) {
+                        if (mScanCallback === this) {
+                            scanning = false
+                            mScanCallback = null
+                            cleanupHandler.removeCallbacks(cleanupRunnable)
+                        }
+                    }
                     Log.e(TAG, "BLE scan failed with error code: $errorCode")
                 }
             }
 
+            scanning = true
             mBluetoothLeScanner?.startScan(listOf(scanFilter), scanSettings, mScanCallback)
-            Log.d(TAG, "BLE scanner started successfully")
+            Log.d(TAG, "BLE scanner started in low-power mode")
 
             cleanupHandler.postDelayed(cleanupRunnable, CLEANUP_INTERVAL_MS)
         } catch (t: Throwable) {
+            stopScanning()
             Log.e(TAG, "Error starting BLE scanner", t)
         }
     }
 
     @SuppressLint("MissingPermission")
+    @Synchronized
     fun stopScanning() {
+        scanning = false
+        cleanupHandler.removeCallbacks(cleanupRunnable)
+        val callback = mScanCallback
+        mScanCallback = null
         try {
-            if (mBluetoothLeScanner != null && mScanCallback != null) {
+            if (callback != null) {
                 Log.d(TAG, "Stopping BLE scanner")
-                mBluetoothLeScanner?.stopScan(mScanCallback)
-                mScanCallback = null
+                mBluetoothLeScanner?.stopScan(callback)
             }
-
-            cleanupHandler.removeCallbacks(cleanupRunnable)
         } catch (t: Throwable) {
             Log.e(TAG, "Error stopping BLE scanner", t)
         }

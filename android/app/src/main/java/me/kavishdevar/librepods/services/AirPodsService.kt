@@ -2782,9 +2782,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
                     setupStemActions()
 
+                    val buffer = ByteArray(65535)
                     while (socket.isConnected) {
                         try {
-                            val buffer = ByteArray(65535)
                             val bytesRead = it.inputStream.read(buffer)
                             var data: ByteArray
                             if (bytesRead > 0) {

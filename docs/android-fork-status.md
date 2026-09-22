@@ -118,3 +118,18 @@ service selection or an unsupported response format; it does not establish that
 the accessory lacks HR support. Duplicate filtering was corrected independently
 and did not resolve the observed no-measurement behavior. The meaning of the
 two-byte responses remains unknown. Do not interpret them as BPM.
+
+## Battery follow-up (2026-09-22)
+
+The owner's Samsung reported high battery use. Its battery statistics attributed
+about 11h26m of Bluetooth scanning to LibrePods; a CPU snapshot showed no busy
+loop. The inherited service used continuous SCAN_MODE_LOW_LATENCY. Routine BLE
+scanning now requests SCAN_MODE_LOW_POWER instead, with the existing manufacturer
+filter. Starts are idempotent and serialized; cleanup callbacks are removed on
+stop or scan failure. The L2CAP receive buffer is reused instead of allocating
+64 KiB for every packet. Nearby detection may respond more slowly. Actual
+battery savings and the disappearance of Samsung's historical warning require
+normal-use observation; these are not claimed as measured improvements.
+
+Android scan-mode reference:
+https://developer.android.com/reference/android/bluetooth/le/ScanSettings#SCAN_MODE_LOW_POWER
