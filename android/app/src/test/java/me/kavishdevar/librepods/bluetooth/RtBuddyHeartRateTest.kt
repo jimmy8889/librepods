@@ -35,9 +35,13 @@ class RtBuddyHeartRateTest {
     @Test fun rejectsAcknowledgmentsInvalidStatusAndOutOfRangeReadings() {
         assertTrue(decoder().feed(frame(byteArrayOf(8,1,0x4a,2,8,19))).samples.isEmpty())
         assertTrue(decoder().feed(sample(logType=2)).samples.isEmpty())
-        assertTrue(decoder().feed(sample(bpm=255)).samples.isEmpty())
+        val outOfRange = decoder().feed(sample(bpm=255))
+        assertTrue(outOfRange.samples.isEmpty())
+        assertEquals(1, outOfRange.rejectionReasons[HeartRateRejectionReason.OUT_OF_RANGE_READING])
         val badTail = sample().apply { this[lastIndex] = 0x7f }
-        assertTrue(decoder().feed(badTail).samples.isEmpty())
+        val unknownStatus = decoder().feed(badTail)
+        assertTrue(unknownStatus.samples.isEmpty())
+        assertEquals(1, unknownStatus.rejectionReasons[HeartRateRejectionReason.UNKNOWN_SENSOR_STATUS])
     }
     @Test fun discoversServiceAndNeverUsesKnownNonHeartFallback() {
         val parser = decoder()
@@ -77,5 +81,11 @@ class RtBuddyHeartRateTest {
         assertEquals(first.sequence, second.sequence)
         assertEquals(255, first.sampleCounter)
         assertEquals(0, second.sampleCounter)
+    }
+    @Test fun separatesControlPayloadsFromSensorReadings() {
+        val control = byteArrayOf(8,19,0x1a,5,1,0x40,0x42,0x0f,0)
+        val result = decoder().feed(frame(byteArrayOf(8,1,0x10,1,0x42,control.size.toByte()) + control))
+        assertTrue(result.samples.isEmpty())
+        assertEquals(1, result.rejectionReasons[HeartRateRejectionReason.UNEXPECTED_PAYLOAD_LENGTH])
     }
 }

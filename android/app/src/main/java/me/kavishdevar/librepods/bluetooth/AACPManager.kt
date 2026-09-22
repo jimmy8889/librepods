@@ -482,18 +482,20 @@ class AACPManager {
         val parsedSamples: Long,
         val rejectedFrames: Long,
         val serviceId: Int?,
-        val discovered: Boolean
+        val discovered: Boolean,
+        val lastRejection: String?
     )
     private val experimentDiagnosticsLock = Any()
     private var rtBuddyChunks = 0L
     private var parsedHeartSamples = 0L
     private var rejectedHeartFrames = 0L
+    private var lastHeartRejection: String? = null
 
     fun heartRateDiagnostics(): HeartRateDiagnostics {
         val resolution = heartRateDecoder.heartRateServiceResolution()
         return synchronized(experimentDiagnosticsLock) {
             HeartRateDiagnostics(rtBuddyChunks, parsedHeartSamples, rejectedHeartFrames,
-                resolution.serviceId, resolution.discoveredFromMetadata)
+                resolution.serviceId, resolution.discoveredFromMetadata, lastHeartRejection)
         }
     }
 
@@ -504,6 +506,9 @@ class AACPManager {
                 (packet.size >= 6 && packet[4] == Opcodes.HEADTRACKING && packet[5] == 0.toByte())) rtBuddyChunks++
             parsedHeartSamples += heartRateResult.samples.size
             rejectedHeartFrames += heartRateResult.rejectedFrameCount
+            if (heartRateResult.rejectionReasons.isNotEmpty()) {
+                lastHeartRejection = heartRateResult.rejectionReasons.keys.joinToString { it.name.lowercase() }
+            }
         }
         recordHeartRateDecodeDiagnostics(heartRateResult)
         heartRateResult.samples.forEach { callback?.onHeartRateReceived(it) }

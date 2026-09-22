@@ -82,7 +82,7 @@ Test on physical AirPods Pro 3 before treating finding/ringing as verified.
 
 ## Validation limits
 
-The FOSS debug APK builds successfully. All 17 local unit tests pass, covering
+The FOSS debug APK builds successfully. All 18 local unit tests pass, covering
 RTBuddy parsing, malformed inputs, service selection, sample filtering, AAC-ELD
 packet framing and WAV generation. No Android
 phone is attached to this workspace, so connection, ringing, and location behavior
@@ -103,3 +103,8 @@ rejection without treating acknowledgements as measurements. Counter semantics
 are based on the captures discussed in upstream PR 702, not a capture from this
 owner's phone. The added regression tests cover constant envelope sequences and
 8-bit sample-counter wraparound. Phone/video-call input routing remains pending.
+
+ADB logs from the owner's initial test confirm rejected heart-rate-related
+responses, with no accepted samples. The follow-up diagnostics distinguish a
+non-measurement payload length, out-of-range reading, and unrecognized sensor
+status without logging the raw payload or weakening validation.

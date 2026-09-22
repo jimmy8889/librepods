@@ -91,7 +91,8 @@ class AirPodsExperiments(private val service: AirPodsService) {
                         val diagnostic = manager.heartRateDiagnostics()
                         val text = "Service: ${diagnostic.serviceId ?: "unavailable"} (${if (diagnostic.discovered) "advertised" else "fallback"})\n" +
                             "Sensor packets: ${diagnostic.rtBuddyChunks - baseline.rtBuddyChunks}; parsed samples: ${diagnostic.parsedSamples - baseline.parsedSamples}; rejected frames: ${diagnostic.rejectedFrames - baseline.rejectedFrames}\n" +
-                            "This attempt: warm-up ${gate.warmingUp}, low quality ${gate.lowQuality}, duplicates ${gate.duplicates}"
+                            "This attempt: warm-up ${gate.warmingUp}, low quality ${gate.lowQuality}, duplicates ${gate.duplicates}\n" +
+                            "Last parser rejection: ${if (diagnostic.rejectedFrames > baseline.rejectedFrames) diagnostic.lastRejection else "none"}"
                         mutableState.update { it.copy(heartDiagnostics = text) }
                         if (lastHeartSampleAt > 0 && SystemClock.elapsedRealtime() - lastHeartSampleAt > 4_000) {
                             mutableState.update { it.copy(bpm = null, heartStatus = "Stream stalled — retrying") }

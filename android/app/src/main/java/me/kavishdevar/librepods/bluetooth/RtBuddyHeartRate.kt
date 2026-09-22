@@ -25,7 +25,10 @@ data class HeartRateSample(
 internal enum class HeartRateRejectionReason {
     UNSUPPORTED_LOG_TYPE,
     MISSING_HEART_RATE_PAYLOAD,
-    UNRECOGNIZED_HEART_RATE_PAYLOAD
+    UNRECOGNIZED_HEART_RATE_PAYLOAD,
+    UNEXPECTED_PAYLOAD_LENGTH,
+    OUT_OF_RANGE_READING,
+    UNKNOWN_SENSOR_STATUS
 }
 
 internal data class HeartRateDecodeResult(
@@ -227,10 +230,13 @@ internal class RtBuddyHeartRateDecoder(
         val acceptedPayload = payloads.firstOrNull(::isValidHeartRatePayload)
             ?: return FrameClassification(
                 related = true,
-                rejectionReason = if (payloads.isEmpty()) {
-                    HeartRateRejectionReason.MISSING_HEART_RATE_PAYLOAD
-                } else {
-                    HeartRateRejectionReason.UNRECOGNIZED_HEART_RATE_PAYLOAD
+                rejectionReason = when {
+                    payloads.isEmpty() -> HeartRateRejectionReason.MISSING_HEART_RATE_PAYLOAD
+                    payloads.none { it.size == HEART_RATE_PAYLOAD_LENGTH } -> HeartRateRejectionReason.UNEXPECTED_PAYLOAD_LENGTH
+                    payloads.filter { it.size == HEART_RATE_PAYLOAD_LENGTH }.none {
+                        it.unsignedByteAt(HEART_RATE_BPM_OFFSET) in MIN_BPM..MAX_BPM
+                    } -> HeartRateRejectionReason.OUT_OF_RANGE_READING
+                    else -> HeartRateRejectionReason.UNKNOWN_SENSOR_STATUS
                 }
             )
 
