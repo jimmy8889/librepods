@@ -26,6 +26,7 @@ class AirPodsExperiments(private val service: AirPodsService) {
         val heartStatus: String = "Not started",
         val bpm: Int? = null,
         val heartSamples: Int = 0,
+        val heartDiagnostics: String = "",
         val micActive: Boolean = false,
         val micStatus: String = "Not started",
         val pcmBytes: Int = 0,
@@ -64,8 +65,9 @@ class AirPodsExperiments(private val service: AirPodsService) {
         if (state.value.micActive || state.value.heartActive) return@launch
         val token = ++heartGeneration
         sessionSocket = BluetoothConnectionManager.aacpSocket
+        val baseline = manager.heartRateDiagnostics()
         heartBefore = manager.getControlCommandStatus(ControlCommandIdentifiers.HRM_STATE)?.value?.firstOrNull()
-        mutableState.update { it.copy(heartActive = true, bpm = null, heartSamples = 0, heartStatus = "Starting — wear at least one earbud") }
+        mutableState.update { it.copy(heartActive = true, bpm = null, heartSamples = 0, heartDiagnostics = "Initializing sensor channel…", heartStatus = "Starting — wear at least one earbud") }
         heartJob = scope.launch {
             try {
                 // A freshly connected RTBuddy channel can remain silent for roughly 30 seconds.
@@ -83,9 +85,14 @@ class AirPodsExperiments(private val service: AirPodsService) {
                     check(withContext(Dispatchers.IO) { sendHeart(token) { manager.sendControlCommand(ControlCommandIdentifiers.HRM_STATE.value, true) } }) { "Heart-rate enable failed" }
                     delay(120)
                     check(withContext(Dispatchers.IO) { sendHeart(token) { manager.sendHeartRateStartFrame() } }) { "Heart-rate stream request failed" }
-                    val deadline = SystemClock.elapsedRealtime() + 20_000
+                    val deadline = SystemClock.elapsedRealtime() + 30_000
                     while (sameConnection() && (lastHeartSampleAt > 0 || SystemClock.elapsedRealtime() < deadline)) {
                         delay(500)
+                        val diagnostic = manager.heartRateDiagnostics()
+                        val text = "Service: ${diagnostic.serviceId ?: "unavailable"} (${if (diagnostic.discovered) "advertised" else "fallback"})\n" +
+                            "Sensor packets: ${diagnostic.rtBuddyChunks - baseline.rtBuddyChunks}; parsed samples: ${diagnostic.parsedSamples - baseline.parsedSamples}; rejected frames: ${diagnostic.rejectedFrames - baseline.rejectedFrames}\n" +
+                            "This attempt: warm-up ${gate.warmingUp}, low quality ${gate.lowQuality}, duplicates ${gate.duplicates}"
+                        mutableState.update { it.copy(heartDiagnostics = text) }
                         if (lastHeartSampleAt > 0 && SystemClock.elapsedRealtime() - lastHeartSampleAt > 4_000) {
                             mutableState.update { it.copy(bpm = null, heartStatus = "Stream stalled — retrying") }
                             break
@@ -105,7 +112,9 @@ class AirPodsExperiments(private val service: AirPodsService) {
         scope.launch {
             if (!state.value.heartActive || !sameConnection()) return@launch
             if (!gate.accept(sample)) {
-                mutableState.update { it.copy(bpm = null, heartStatus = "Calibrating — waiting for a stable signal") }
+                if (lastHeartSampleAt == 0L) {
+                    mutableState.update { it.copy(heartStatus = "Calibrating — waiting for a stable signal") }
+                }
                 return@launch
             }
             lastHeartSampleAt = sample.receivedAtElapsedRealtime

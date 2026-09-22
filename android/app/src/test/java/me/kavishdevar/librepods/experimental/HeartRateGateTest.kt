@@ -14,4 +14,21 @@ class HeartRateGateTest {
         assertFalse(gate.accept(sample(5)))
         assertTrue(gate.accept(sample(6)))
     }
+    @Test fun acceptsAdvancingPayloadCountersWithAnUnchangedEnvelopeSequence() {
+        val gate = HeartRateGate()
+        repeat(4) { assertFalse(gate.accept(sample(9059).copy(sampleCounter=it))) }
+        assertTrue(gate.accept(sample(9059).copy(sampleCounter=4)))
+        assertTrue(gate.accept(sample(9059).copy(sampleCounter=5)))
+        assertFalse(gate.accept(sample(9060).copy(sampleCounter=5)))
+        assertEquals(1, gate.duplicates)
+    }
+    @Test fun acceptsCounterWrapAndKeepsLowQualityHidden() {
+        val gate = HeartRateGate()
+        repeat(4) { assertFalse(gate.accept(sample(1).copy(sampleCounter=250+it))) }
+        assertFalse(gate.accept(sample(1,20).copy(sampleCounter=254)))
+        assertTrue(gate.accept(sample(1).copy(sampleCounter=255)))
+        assertTrue(gate.accept(sample(1).copy(sampleCounter=0)))
+        assertEquals(4, gate.warmingUp)
+        assertEquals(1, gate.lowQuality)
+    }
 }

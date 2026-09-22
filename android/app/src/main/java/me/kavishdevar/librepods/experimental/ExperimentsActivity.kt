@@ -50,8 +50,9 @@ class ExperimentsActivity : ComponentActivity() {
                             Text("Heart rate", style = MaterialTheme.typography.titleLarge)
                             Text(state.bpm?.let { "$it BPM" } ?: "— BPM", style = MaterialTheme.typography.displaySmall)
                             Text(state.heartStatus)
+                            if (state.heartDiagnostics.isNotEmpty()) Text(state.heartDiagnostics)
                             Text("Accepted samples: ${state.heartSamples}")
-                            Text("Wear at least one AirPod Pro 3. Startup can take up to a minute. Experimental readings are not for medical decisions; unknown or poor-quality samples are hidden.")
+                            Text("Wear at least one AirPod Pro 3. Startup can take up to two minutes. Experimental readings are not for medical decisions; unknown or poor-quality samples are hidden.")
                             Button(onClick = { if (state.heartActive) experiments.stopHeartRate() else experiments.startHeartRate() }, enabled = !state.micActive) {
                                 Text(if (state.heartActive) "Stop heart-rate test" else "Start heart-rate test")
                             }

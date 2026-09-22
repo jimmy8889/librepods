@@ -477,8 +477,34 @@ class AACPManager {
         return opcode + data
     }
 
+    data class HeartRateDiagnostics(
+        val rtBuddyChunks: Long,
+        val parsedSamples: Long,
+        val rejectedFrames: Long,
+        val serviceId: Int?,
+        val discovered: Boolean
+    )
+    private val experimentDiagnosticsLock = Any()
+    private var rtBuddyChunks = 0L
+    private var parsedHeartSamples = 0L
+    private var rejectedHeartFrames = 0L
+
+    fun heartRateDiagnostics(): HeartRateDiagnostics {
+        val resolution = heartRateDecoder.heartRateServiceResolution()
+        return synchronized(experimentDiagnosticsLock) {
+            HeartRateDiagnostics(rtBuddyChunks, parsedHeartSamples, rejectedHeartFrames,
+                resolution.serviceId, resolution.discoveredFromMetadata)
+        }
+    }
+
     fun receivePacket(packet: ByteArray): Boolean {
         val heartRateResult = heartRateDecoder.feed(packet)
+        synchronized(experimentDiagnosticsLock) {
+            if (heartRateResult.suppressRawLogging ||
+                (packet.size >= 6 && packet[4] == Opcodes.HEADTRACKING && packet[5] == 0.toByte())) rtBuddyChunks++
+            parsedHeartSamples += heartRateResult.samples.size
+            rejectedHeartFrames += heartRateResult.rejectedFrameCount
+        }
         recordHeartRateDecodeDiagnostics(heartRateResult)
         heartRateResult.samples.forEach { callback?.onHeartRateReceived(it) }
         heartRateResult.passthroughPackets.forEach(::receiveStandardPacket)

@@ -7,8 +7,8 @@ import java.util.Random
 class RtBuddyHeartRateTest {
     private fun decoder() = RtBuddyHeartRateDecoder({ 1234L }, { 5678L })
     private fun frame(body: ByteArray): ByteArray = byteArrayOf(4,0,4,0,0x17,0,0,0,0x10,0,body.size.toByte(),(body.size ushr 8).toByte()) + body
-    private fun sample(service: Int = 19, bpm: Int = 72, logType: Int = 1): ByteArray {
-        val payload = ByteArray(18).apply { this[1] = bpm.toByte(); this[2] = 200.toByte(); this[15] = 0x10 }
+    private fun sample(service: Int = 19, bpm: Int = 72, logType: Int = 1, counter: Int = 0): ByteArray {
+        val payload = ByteArray(18).apply { this[1] = bpm.toByte(); this[2] = 200.toByte(); this[3] = counter.toByte(); this[15] = 0x10 }
         val command = byteArrayOf(8,service.toByte(),0x1a,18) + payload
         return frame(byteArrayOf(8,1,0x10,logType.toByte(),0x2a,command.size.toByte()) + command)
     }
@@ -69,5 +69,13 @@ class RtBuddyHeartRateTest {
         val parser = decoder()
         assertTrue(parser.feed(oversized).samples.isEmpty())
         assertEquals(72, parser.feed(sample()).samples.single().bpm)
+    }
+    @Test fun extractsPayloadCounterIndependentlyOfEnvelopeSequence() {
+        val parser = decoder()
+        val first = parser.feed(sample(counter=255)).samples.single()
+        val second = parser.feed(sample(counter=0)).samples.single()
+        assertEquals(first.sequence, second.sequence)
+        assertEquals(255, first.sampleCounter)
+        assertEquals(0, second.sampleCounter)
     }
 }

@@ -30,7 +30,7 @@ App Settings → AirPods experiments now provides two explicit foreground tests:
   sample stream, and displays accepted BPM values. It rejects malformed frames,
   acknowledgements, duplicates, warm-up samples and low-quality samples. Readings
   clear after four seconds without an accepted sample. Startup retries are bounded;
-  initial connection can take about a minute. Wear at least one AirPod Pro 3.
+  each attempt allows 30 seconds and startup can take up to two minutes. Wear at least one AirPod Pro 3.
 - Microphone: requests the AACP high-resolution microphone stream and decodes
   AAC-ELD through Android MediaCodec. A ten-second PCM WAV sample can be played
   or explicitly shared. The actual decoder output sample rate is shown. Music
@@ -82,10 +82,24 @@ Test on physical AirPods Pro 3 before treating finding/ringing as verified.
 
 ## Validation limits
 
-The FOSS debug APK builds successfully. All 14 local unit tests pass, covering
+The FOSS debug APK builds successfully. All 17 local unit tests pass, covering
 RTBuddy parsing, malformed inputs, service selection, sample filtering, AAC-ELD
 packet framing and WAV generation. No Android
 phone is attached to this workspace, so connection, ringing, and location behavior
 still require testing on the owner's device. Full-project lint is not clean:
 existing upstream findings include API-level compatibility, widget tint checks,
 and an implicit service broadcast. These are not represented as passing checks.
+
+## Device feedback and heart-rate troubleshooting (2026-09-22)
+
+The owner reports successful microphone recording during audio playback. Heart
+rate with one earbud ended with "No sustained readings"; its cause is not yet
+confirmed. The follow-up build uses the payload's per-sample counter instead of
+its enclosing message sequence for duplicate filtering, allows 30 seconds per
+startup attempt, and displays sensor-packet, parsed-sample, rejected-frame,
+warm-up, quality and duplicate counts. The diagnostics contain no raw biometric
+payloads. These counters distinguish a silent transport from parser or quality
+rejection without treating acknowledgements as measurements. Counter semantics
+are based on the captures discussed in upstream PR 702, not a capture from this
+owner's phone. The added regression tests cover constant envelope sequences and
+8-bit sample-counter wraparound. Phone/video-call input routing remains pending.

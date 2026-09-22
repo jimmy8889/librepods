@@ -18,7 +18,8 @@ data class HeartRateSample(
     val sequence: Int,
     val quality: Int,
     val receivedAtMillis: Long,
-    val receivedAtElapsedRealtime: Long = SystemClock.elapsedRealtime()
+    val receivedAtElapsedRealtime: Long = SystemClock.elapsedRealtime(),
+    val sampleCounter: Int = sequence
 )
 
 internal enum class HeartRateRejectionReason {
@@ -239,6 +240,7 @@ internal class RtBuddyHeartRateDecoder(
                 bpm = acceptedPayload.unsignedByteAt(HEART_RATE_BPM_OFFSET),
                 sequence = sequence,
                 quality = acceptedPayload.unsignedByteAt(2),
+                sampleCounter = acceptedPayload.unsignedByteAt(3),
                 receivedAtMillis = wallClockMillis(),
                 receivedAtElapsedRealtime = elapsedRealtimeMillis()
             )
