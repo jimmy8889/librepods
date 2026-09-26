@@ -1,6 +1,7 @@
 package me.kavishdevar.librepods.experimental
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.SystemClock
@@ -22,6 +23,15 @@ import java.io.File
 /** Explicit foreground experiments only. No automatic recording or Health Connect export. */
 class AirPodsExperiments(private val service: AirPodsService) {
     data class State(
+        val recordingId: String? = null,
+        val recordingKind: String? = null,
+        val recordingStart: Long? = null,
+        val dailyEnabled: Boolean = false,
+        val dailyMinutes: Int = 15,
+        val movementBoost: Boolean = false,
+        val movementStatus: String = "Movement boost off",
+        val syncStatus: String = "",
+        val recentWorkoutPoints: List<me.kavishdevar.librepods.workouts.WorkoutPoint> = emptyList(),
         val heartActive: Boolean = false,
         val heartStatus: String = "Not started",
         val bpm: Int? = null,
@@ -55,6 +65,140 @@ class AirPodsExperiments(private val service: AirPodsService) {
     private var pcmChannels = 0
     private val startMicPacket = byteArrayOf(4, 0, 4, 0, 0x58, 0, 0, 0, 9, 0, 0, 1, 0x82.toByte(), 0, 0, 0, 4, 0x96.toByte(), 0)
     private val stopMicPacket = byteArrayOf(4, 0, 4, 0, 0x58, 0, 0, 0, 2, 0, 3, 1)
+    private val workoutStore = me.kavishdevar.librepods.workouts.WorkoutStore.get(service)
+    private val workoutPrefs = service.getSharedPreferences("workout_settings", Context.MODE_PRIVATE)
+    private var workoutTimeline: me.kavishdevar.librepods.workouts.WorkoutTimeline? = null
+    private var dailyJob: Job? = null
+    private val movementMonitor = me.kavishdevar.librepods.workouts.MovementMonitor(service)
+    private var movementJob: Job? = null
+    private var movementPausedUntilRest = false
+    init {
+        mutableState.update { it.copy(dailyEnabled = workoutPrefs.getBoolean("daily", false),
+            movementBoost = workoutPrefs.getBoolean("movement_boost", false),
+            dailyMinutes = workoutPrefs.getInt("interval", 15).takeIf { value -> value in listOf(5,15,30) } ?: 15) }
+        scheduleDaily()
+        scheduleMovement()
+        scope.launch {
+            workoutStore.error.collect { error ->
+                if (error != null) {
+                    setDailyReadings(false, state.value.dailyMinutes)
+                    stopHeartRate()
+                    mutableState.update { it.copy(syncStatus = error) }
+                }
+            }
+        }
+    }
+
+    fun startWorkout(type: String) {
+        if (state.value.recordingKind in listOf("Daily readings", "Activity readings")) stopHeartRate()
+        if (closed || state.value.heartActive || state.value.micActive) return
+        if (!connected() || service.airpodsInstance?.model?.capabilities?.contains(Capability.HRM) != true) {
+            mutableState.update { it.copy(heartStatus = "Connect AirPods Pro 3 before recording.") }; return
+        }
+        val startedAt = System.currentTimeMillis()
+        workoutTimeline = me.kavishdevar.librepods.workouts.WorkoutTimeline(startedAt, SystemClock.elapsedRealtime())
+        val id = workoutStore.begin(type, startedAt)
+        mutableState.update { it.copy(recordingId = id, recordingKind = type, recordingStart = startedAt,
+            recentWorkoutPoints = emptyList(), syncStatus = "Recording locally") }
+        startHeartRate()
+    }
+
+    private fun finishRecording(outcome: String) {
+        val current = state.value
+        val id = current.recordingId ?: return
+        val end = workoutTimeline?.timeAt(SystemClock.elapsedRealtime()) ?: System.currentTimeMillis()
+        workoutStore.finish(id, end, outcome)
+        workoutTimeline = null
+        mutableState.update { it.copy(recordingId = null, recordingKind = null, recordingStart = null, syncStatus = "Saved on this phone") }
+        if (current.recordingKind in listOf("Daily readings", "Activity readings")) scope.launch {
+            try {
+                if (workoutStore.load(id).points.isEmpty()) {
+                    workoutStore.delete(id)
+                    mutableState.update { it.copy(syncStatus = "No valid reading this time; will retry at the next interval") }
+                    return@launch
+                }
+                me.kavishdevar.librepods.workouts.WorkoutHealthConnect.export(service, id)
+                mutableState.update { it.copy(syncStatus = "Automatic readings sent to Health Connect") }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { mutableState.update { it.copy(syncStatus = "Automatic readings saved locally; Health Connect sync pending") } }
+        }
+    }
+
+    fun setDailyReadings(enabled: Boolean, minutes: Int) {
+        val interval = minutes.takeIf { it in listOf(5,15,30) } ?: 15
+        workoutPrefs.edit().putBoolean("daily", enabled).putInt("interval", interval).apply()
+        mutableState.update { it.copy(dailyEnabled = enabled, dailyMinutes = interval) }
+        dailyJob?.cancel()
+        if (state.value.recordingKind in listOf("Daily readings", "Activity readings")) stopHeartRate()
+        scheduleDaily()
+        scheduleMovement()
+    }
+
+    private fun scheduleDaily() {
+        if (!state.value.dailyEnabled || closed) return
+        dailyJob = scope.launch {
+            delay(1_000)
+            while (isActive && !closed) {
+                if (connected() && service.isEarbudWorn() &&
+                    !state.value.heartActive && !state.value.micActive) {
+                    startWorkout("Daily readings")
+                    val id = state.value.recordingId
+                    val deadline = SystemClock.elapsedRealtime() + 30_000
+                    while (id != null && state.value.recordingId == id && state.value.heartSamples < 5 && service.isEarbudWorn() &&
+                        SystemClock.elapsedRealtime() < deadline) delay(500)
+                    if (id != null && state.value.recordingId == id) stopHeartRate()
+                }
+                delay(state.value.dailyMinutes * 60_000L)
+            }
+        }
+    }
+
+    fun setMovementBoost(enabled: Boolean) {
+        workoutPrefs.edit().putBoolean("movement_boost", enabled).apply()
+        mutableState.update { it.copy(movementBoost = enabled) }
+        if (!enabled && state.value.recordingKind == "Activity readings") stopHeartRate()
+        service.startForegroundNotification()
+        scheduleMovement()
+    }
+
+    fun stopRecordingFromUser() {
+        movementPausedUntilRest = true
+        stopHeartRate()
+    }
+
+    private fun scheduleMovement() {
+        movementJob?.cancel(); movementMonitor.stop()
+        if (!state.value.dailyEnabled || !state.value.movementBoost || closed) {
+            mutableState.update { it.copy(movementStatus = "Movement boost off") }; return
+        }
+        movementJob = scope.launch {
+            service.startForegroundNotification()
+            while (isActive && !closed) {
+                if (!connected() || !service.isEarbudWorn()) {
+                    movementMonitor.stop()
+                    if (state.value.recordingKind == "Activity readings") stopHeartRate()
+                    mutableState.update { it.copy(movementStatus = "Waiting for connected, worn AirPods") }
+                } else if (!movementMonitor.enable()) {
+                    if (state.value.recordingKind == "Activity readings") stopHeartRate()
+                    mutableState.update { it.copy(movementStatus = "Physical activity permission or step sensor unavailable") }
+                } else {
+                    val active = movementMonitor.active(SystemClock.elapsedRealtime())
+                    if (!active) movementPausedUntilRest = false
+                    mutableState.update { it.copy(movementStatus = if(active) "Walking/running movement detected" else "Watching for sustained steps") }
+                    if (active && !movementPausedUntilRest && !state.value.micActive &&
+                        (!state.value.heartActive || state.value.recordingKind == "Daily readings")) startWorkout("Activity readings")
+                    if (!active && state.value.recordingKind == "Activity readings") stopHeartRate()
+                }
+                delay(15_000)
+            }
+        }
+    }
+
+    fun stopTestsOnLeave() {
+        if (state.value.recordingId == null) stopHeartRate()
+        if (state.value.micActive) stopMicrophone(false)
+    }
+
     private fun connected() = BluetoothConnectionManager.aacpSocket?.isConnected == true
     private fun sameConnection() = connected() && sessionSocket === BluetoothConnectionManager.aacpSocket
 
@@ -132,7 +276,7 @@ class AirPodsExperiments(private val service: AirPodsService) {
                 mutableState.update { it.copy(heartStatus = reason) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableState.update { it.copy(heartStatus = error.message ?: "Heart-rate test failed") } }
-            finally { if (token == heartGeneration) { stopHeartCommands(); mutableState.update { it.copy(heartActive = false, bpm = null) } } }
+            finally { if (token == heartGeneration) { stopHeartCommands(); finishRecording("Sensor stopped"); mutableState.update { it.copy(heartActive = false, bpm = null) } } }
         }
     }
 
@@ -144,6 +288,11 @@ class AirPodsExperiments(private val service: AirPodsService) {
                     mutableState.update { it.copy(heartStatus = "Calibrating — waiting for a stable signal") }
                 }
                 return@launch
+            }
+            state.value.recordingId?.let { id ->
+                val time = workoutTimeline?.timeAt(sample.receivedAtElapsedRealtime) ?: return@let
+                workoutStore.record(id, time, sample.bpm)
+                mutableState.update { it.copy(recentWorkoutPoints = (it.recentWorkoutPoints + me.kavishdevar.librepods.workouts.WorkoutPoint(time, sample.bpm)).takeLast(120)) }
             }
             lastHeartSampleAt = sample.receivedAtElapsedRealtime
             mutableState.update { it.copy(bpm = sample.bpm, heartSamples = it.heartSamples + 1, heartStatus = "Live experimental reading") }
@@ -173,6 +322,7 @@ class AirPodsExperiments(private val service: AirPodsService) {
         heartGeneration++
         if (state.value.heartActive) stopHeartCommands()
         heartJob?.cancel(); heartJob = null
+        finishRecording("Stopped")
         mutableState.update { it.copy(heartActive = false, bpm = null, heartStatus = "Stopped") }
     }
 
@@ -266,5 +416,5 @@ class AirPodsExperiments(private val service: AirPodsService) {
 
     fun stopAll() { stopHeartRate(); if (state.value.micActive) stopMicrophone(false) }
     fun disconnected() = scope.launch { stopAll(); mutableState.update { it.copy(bpm = null, heartStatus = "Disconnected", micStatus = "Disconnected") } }
-    fun close() { closed = true; stopAll(); scope.cancel() }
+    fun close() { closed = true; dailyJob?.cancel(); movementJob?.cancel(); movementMonitor.stop(); stopAll(); scope.cancel() }
 }

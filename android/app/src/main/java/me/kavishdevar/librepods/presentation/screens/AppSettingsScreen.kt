@@ -223,6 +223,12 @@ fun AppSettingsScreen(
             )
         }
 
+        StyledList(title = "Heart rate") {
+            StyledListItem(name = "Workouts and Samsung Health", onClick = {
+                context.startActivity(Intent(context, me.kavishdevar.librepods.workouts.WorkoutsActivity::class.java))
+            })
+        }
+
         StyledList(title = "AirPods experiments") {
             StyledListItem(
                 name = "Heart rate and high-quality microphone",

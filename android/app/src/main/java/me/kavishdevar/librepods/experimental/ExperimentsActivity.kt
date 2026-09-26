@@ -43,7 +43,7 @@ class ExperimentsActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.systemBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("AirPods experiments", style = MaterialTheme.typography.headlineMedium)
-                        Text("Early protocol support for your AirPods. Tests stop when you leave this screen. Connect the AirPods in LibrePods before starting.")
+                        Text("Early protocol support for your AirPods. Tests stop when you leave this screen; an active workout continues. Connect the AirPods in LibrePods before starting.")
                         val experiments = service?.experiments
                         if (experiments == null) Text("Connecting to LibrePods service…") else {
                             val state by experiments.state.collectAsState()
@@ -58,7 +58,7 @@ class ExperimentsActivity : ComponentActivity() {
                                         "${state.heartStatus}\n${state.heartDiagnostics}\nAccepted samples: ${state.heartSamples}"))
                             }) { Text("Copy sensor diagnostics") }
                             Text("Wear at least one AirPod Pro 3. Startup can take up to two minutes. Experimental readings are not for medical decisions; unknown or poor-quality samples are hidden.")
-                            Button(onClick = { if (state.heartActive) experiments.stopHeartRate() else experiments.startHeartRate() }, enabled = !state.micActive) {
+                            Button(onClick = { if (state.heartActive) experiments.stopHeartRate() else experiments.startHeartRate() }, enabled = !state.micActive && state.recordingId == null) {
                                 Text(if (state.heartActive) "Stop heart-rate test" else "Start heart-rate test")
                             }
                             HorizontalDivider()
@@ -97,7 +97,7 @@ class ExperimentsActivity : ComponentActivity() {
         if (!bound) message = "Could not connect to LibrePods. Open the main app and retry."
     }
     override fun onStop() {
-        service?.experiments?.stopAll()
+        service?.experiments?.stopTestsOnLeave()
         if (bound) unbindService(connection)
         bound = false; service = null
         super.onStop()

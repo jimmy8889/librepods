@@ -1713,7 +1713,13 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).build()
 
         try {
-            startForeground(1, notification)
+            val healthTracking = Build.VERSION.SDK_INT >= 34 &&
+                checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED &&
+                getSharedPreferences("workout_settings", MODE_PRIVATE).getBoolean("movement_boost", false) &&
+                getSharedPreferences("workout_settings", MODE_PRIVATE).getBoolean("daily", false)
+            val types = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
+                (if (healthTracking) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH else 0)
+            startForeground(1, notification, types)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1751,6 +1757,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         notificationManager.notify(3, notification)
     }
+
+    fun isEarbudWorn(): Boolean = earDetectionNotification.status.any { it == 0.toByte() }
 
     fun sendANCBroadcast() {
         me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow.update(this)

@@ -261,3 +261,45 @@ Updated the top popup to a five-second total display period. The original 700 ms
 entrance animation remains; automatic dismissal now calls the animated close
 path at 4.3 seconds, allowing its 700 ms exit animation to finish at five seconds.
 The bottom popup remains removed. Timing has not been measured on the phone.
+
+## Workouts, periodic readings and movement boost (2026-09-26)
+
+Owner confirmed 94 parsed / 90 accepted HR samples (four warm-up), advertised HR
+service 20, motion service 16. This is the first user-confirmed working stream.
+
+Added Settings → Heart rate → Workouts and Samsung Health. Manual walking,
+running, cycling and other workouts continue in the existing foreground service
+when the activity closes or the screen turns off. Accepted samples are saved
+individually on a serialized SQLite worker in noBackupFilesDir. Disconnect or
+service shutdown ends a session; process-restart recovery closes interrupted
+sessions at their last stored reading. No invented calories, distance or GPS.
+
+Health Connect 1.1.0 integration requests only WRITE_HEART_RATE and WRITE_EXERCISE,
+with Android 13 rationale and Android 14+ permission-usage entry points. Finished
+workouts export an ExerciseSessionRecord and minute-bucketed HeartRateRecords.
+Stable client IDs/version make partial export retries idempotent. Local delete
+does not delete external copies; the UI states this. Samsung Health must separately
+be allowed to read the records. This is saved-data syncing, NOT a live sensor
+inside Samsung Health on the same phone. No supported local live-sensor injection
+API was found. Sources:
+https://developer.samsung.com/health/blog/en/accessing-samsung-health-data-through-health-connect
+https://developer.samsung.com/health/accessory/accessory-faq.html
+
+Optional daily sampling (default OFF; 15 minutes, configurable 5/15/30) requests
+up to five accepted samples with a 30-second cap while connected and worn. Phone
+sleep can defer checks; no exact alarms/wake locks/new Bluetooth scans are added.
+Automatic samples export when Health Connect write permissions are available,
+otherwise stay local for explicit retry. Empty automatic sessions are discarded.
+
+Optional movement boost uses the phone TYPE_STEP_DETECTOR and Physical activity
+permission, with the health foreground-service type enabled only when permitted.
+60 steps within 90 seconds enters frequent recording (~1 Hz); 3 minutes without
+steps exits. This detects walking/running-like movement, not cycling or strength
+training. Manual recording takes priority; detected movement exports HR only and
+does not create a guessed workout. A user stop suppresses auto-resume until rest.
+https://developer.android.com/develop/sensors-and-location/sensors/sensors_motion
+
+Validation covers motion entry/exit, isolated/duplicate steps, inactivity gaps,
+monotonic session timestamps, stable export IDs, gaps, sample bounds and automatic
+readings not producing exercise sessions. Actual background behavior, permissions
+and Samsung Health ingestion still require testing on the owner's phone.
