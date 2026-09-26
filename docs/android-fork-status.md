@@ -212,3 +212,15 @@ available; the old separate tiles and widgets remain removed. App Settings
 includes an Add AirPods controls to Quick Settings action using Android's tile
 placement prompt. Status listeners run only while the tile is visible, with
 no periodic polling or extra Bluetooth scans. Phone validation remains pending.
+
+## Home widget placement compatibility (2026-09-26)
+
+User reports Lawnchair 15 permission approval followed by no widget and requests
+a narrower row for a four-column grid. No connected
+phone/logs yet, so the root cause remains unconfirmed. Changed the default span
+from five to four columns, minimum width from 300dp to 280dp, and minimum height
+to 68dp to accommodate the 52dp buttons plus padding. Added a distinct home-screen
+pin action in app settings, separate from Quick Settings. It uses the launcher's
+pin flow and confirms success only from the completion callback, which also
+refreshes widget content. Unsupported/failed requests show manual placement
+instructions. No extra permissions are requested.

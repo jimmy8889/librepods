@@ -3,8 +3,8 @@
     android:description="@string/row_description"
     android:initialLayout="@layout/airpods_control_row"
     android:previewLayout="@layout/airpods_control_row"
-    android:minWidth="300dp" android:minHeight="56dp"
-    android:minResizeWidth="300dp"
-    android:targetCellWidth="5" android:targetCellHeight="1"
+    android:minWidth="280dp" android:minHeight="68dp"
+    android:minResizeWidth="280dp"
+    android:targetCellWidth="4" android:targetCellHeight="1"
     android:resizeMode="horizontal" android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

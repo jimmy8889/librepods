@@ -193,6 +193,15 @@ fun AppSettingsScreen(
             enabled = state.isPremium
         )
 
+        StyledList(title = stringResource(R.string.widget_home_section)) {
+            StyledListItem(
+                name = stringResource(R.string.widget_add_home),
+                onClick = {
+                    me.kavishdevar.librepods.presentation.widgets.ReconnectWidget.requestHomeWidget(context)
+                }
+            )
+        }
+
         StyledList(title = "Quick Settings") {
             StyledListItem(
                 name = "Add AirPods controls to Quick Settings",

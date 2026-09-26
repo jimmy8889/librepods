@@ -1,6 +1,8 @@
 package me.kavishdevar.librepods.presentation.widgets
 
 import android.Manifest
+import android.app.PendingIntent
+import android.content.ComponentName
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.bluetooth.BluetoothManager
@@ -26,12 +28,38 @@ class ReconnectWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         when (intent.action) {
+            ACTION_PINNED -> {
+                AirPodsControlRow.update(context, force = true)
+                Toast.makeText(context, R.string.widget_added, Toast.LENGTH_LONG).show()
+            }
             ACTION_RECONNECT -> requestReconnect(context)
             AirPodsControlRow.ACTION_MODE -> AirPodsControlRow.selectMode(context, intent.getIntExtra("mode", -1))
         }
     }
 
     companion object {
+        private const val ACTION_PINNED = "me.kavishdevar.librepods.WIDGET_PINNED"
+
+        fun requestHomeWidget(context: Context) {
+            val manager = AppWidgetManager.getInstance(context)
+            if (!manager.isRequestPinAppWidgetSupported) {
+                Toast.makeText(context, R.string.widget_add_manually, Toast.LENGTH_LONG).show()
+                return
+            }
+            val callback = PendingIntent.getBroadcast(context, 0,
+                Intent(context, ReconnectWidget::class.java).setAction(ACTION_PINNED),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            try {
+                val accepted = manager.requestPinAppWidget(
+                    ComponentName(context, ReconnectWidget::class.java), null, callback)
+                // An accepted request only opens the launcher's placement flow. The callback
+                // above is the confirmation that the launcher actually added the widget.
+                if (!accepted) Toast.makeText(context, R.string.widget_add_manually, Toast.LENGTH_LONG).show()
+            } catch (_: RuntimeException) {
+                Toast.makeText(context, R.string.widget_add_manually, Toast.LENGTH_LONG).show()
+            }
+        }
+
         const val ACTION_RECONNECT = "me.kavishdevar.librepods.WIDGET_RECONNECT"
 
         fun requestReconnect(context: Context) {

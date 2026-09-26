@@ -323,4 +323,8 @@
     <string name="row_anc">ANC</string>
     <string name="row_auto">Auto</string>
     <string name="row_connect">Connect</string>
+    <string name="widget_home_section">Home-screen widget</string>
+    <string name="widget_add_home">Add AirPods controls to home screen</string>
+    <string name="widget_added">AirPods widget added to your home screen</string>
+    <string name="widget_add_manually">Long-press your home screen, choose Widgets → LibrePods → AirPods controls, and place it in an empty row.</string>
 </resources>
