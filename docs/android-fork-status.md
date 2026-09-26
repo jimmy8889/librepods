@@ -254,3 +254,10 @@ Removed the bottom popup and its setting. The existing top popup now has a
 two-second deadline, including its exit animation; touches do not extend it.
 The deadline removes the overlay immediately and stops video playback, even
 if an animated dismissal is in progress. Heart-rate investigation is unchanged.
+
+## Five-second animated popup (2026-09-26)
+
+Updated the top popup to a five-second total display period. The original 700 ms
+entrance animation remains; automatic dismissal now calls the animated close
+path at 4.3 seconds, allowing its 700 ms exit animation to finish at five seconds.
+The bottom popup remains removed. Timing has not been measured on the phone.

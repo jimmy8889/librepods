@@ -170,7 +170,7 @@ class IslandWindow(private val context: Context) {
         if (ServiceManager.getService()?.islandOpen == true) return
         else ServiceManager.getService()?.islandOpen = true
 
-        autoCloseDeadline = android.os.SystemClock.uptimeMillis() + 2_000L
+        autoCloseDeadline = android.os.SystemClock.uptimeMillis() + 5_000L
         val displayMetrics = Resources.getSystem().displayMetrics
         val width = (displayMetrics.widthPixels * 0.95).toInt()
         screenHeight = displayMetrics.heightPixels
@@ -472,8 +472,9 @@ class IslandWindow(private val context: Context) {
     private fun resetAutoCloseTimer() {
         autoCloseRunnable?.let { autoCloseHandler?.removeCallbacks(it) }
         autoCloseHandler = Handler(Looper.getMainLooper())
-        autoCloseRunnable = Runnable { forceClose() }
-        val remaining = (autoCloseDeadline - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0L)
+        autoCloseRunnable = Runnable { close() }
+        // Start the 700 ms exit animation early enough to finish at five seconds.
+        val remaining = (autoCloseDeadline - android.os.SystemClock.uptimeMillis() - 700L).coerceAtLeast(0L)
         autoCloseHandler?.postDelayed(autoCloseRunnable!!, remaining)
     }
 

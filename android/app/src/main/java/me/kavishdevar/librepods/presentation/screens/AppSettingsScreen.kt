@@ -241,7 +241,7 @@ fun AppSettingsScreen(
             StyledList(title = stringResource(R.string.popup_animations)) {
                 StyledToggle(
                     label = stringResource(R.string.show_island_popup),
-                    description = "Show a top-screen popup that disappears after two seconds",
+                    description = "Show a top-screen popup with animated entrance and exit over five seconds",
                     checked = state.showIslandPopup,
                     onCheckedChange = viewModel::setShowIslandPopup,
                 )
