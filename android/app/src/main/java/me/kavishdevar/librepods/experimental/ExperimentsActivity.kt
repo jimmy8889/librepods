@@ -52,6 +52,11 @@ class ExperimentsActivity : ComponentActivity() {
                             Text(state.heartStatus)
                             if (state.heartDiagnostics.isNotEmpty()) Text(state.heartDiagnostics)
                             Text("Accepted samples: ${state.heartSamples}")
+                            if (state.heartDiagnostics.isNotEmpty()) TextButton(onClick = {
+                                getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
+                                    android.content.ClipData.newPlainText("LibrePods sensor diagnostics",
+                                        "${state.heartStatus}\n${state.heartDiagnostics}\nAccepted samples: ${state.heartSamples}"))
+                            }) { Text("Copy sensor diagnostics") }
                             Text("Wear at least one AirPod Pro 3. Startup can take up to two minutes. Experimental readings are not for medical decisions; unknown or poor-quality samples are hidden.")
                             Button(onClick = { if (state.heartActive) experiments.stopHeartRate() else experiments.startHeartRate() }, enabled = !state.micActive) {
                                 Text(if (state.heartActive) "Stop heart-rate test" else "Start heart-rate test")

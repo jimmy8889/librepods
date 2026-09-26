@@ -43,6 +43,7 @@ class AirPodsExperiments(private val service: AirPodsService) {
     private var gate = HeartRateGate()
     private var lastHeartSampleAt = 0L
     private var heartBefore: Byte? = null
+    private var motionProbeService: Int? = null
     private var conversationBefore: Byte? = null
     private var sessionSocket: android.bluetooth.BluetoothSocket? = null
     @Volatile private var decoder: AacEldDecoder? = null
@@ -81,6 +82,25 @@ class AirPodsExperiments(private val service: AirPodsService) {
                         check(withContext(Dispatchers.IO) { sendHeart(token, send) }) { "RTBuddy initialization failed" }
                         delay(220)
                     }
+                    // After the baseline attempt, test whether warming the advertised motion
+                    // service wakes RTBuddy. Never guess service IDs or stop existing head tracking.
+                    if (attempt > 0 && !service.isHeadTrackingActive) {
+                        val before = manager.heartRateDiagnostics()
+                        val motionId = before.motionServiceId
+                        if (motionId != null && motionId != before.serviceId) {
+                            mutableState.update { it.copy(heartStatus = "Waking sensor channel — attempt ${attempt + 1}/3") }
+                            if (withContext(Dispatchers.IO) { sendHeart(token) {
+                                manager.sendMotionProbeStart(motionId).also { sent ->
+                                    if (sent) motionProbeService = motionId
+                                }
+                            } }) {
+                                val warmupDeadline = SystemClock.elapsedRealtime() + 8_000
+                                while (sameConnection() && SystemClock.elapsedRealtime() < warmupDeadline &&
+                                    manager.heartRateDiagnostics().otherSensorDataFrames <= before.otherSensorDataFrames) delay(250)
+                                stopMotionProbe()
+                            }
+                        }
+                    }
                     check(manager.awaitHeartRateServiceResolution()) { "No usable heart-rate service advertised" }
                     check(withContext(Dispatchers.IO) { sendHeart(token) { manager.sendControlCommand(ControlCommandIdentifiers.HRM_STATE.value, true) } }) { "Heart-rate enable failed" }
                     delay(120)
@@ -91,6 +111,7 @@ class AirPodsExperiments(private val service: AirPodsService) {
                         val diagnostic = manager.heartRateDiagnostics()
                         val text = "Service: ${diagnostic.serviceId ?: "unavailable"} (${if (diagnostic.discovered) "advertised" else "fallback"})\n" +
                             "Sensor packets: ${diagnostic.rtBuddyChunks - baseline.rtBuddyChunks}; parsed samples: ${diagnostic.parsedSamples - baseline.parsedSamples}; rejected frames: ${diagnostic.rejectedFrames - baseline.rejectedFrames}\n" +
+                            "Heart-rate acknowledgements: ${diagnostic.acknowledgements - baseline.acknowledgements}; other sensor data frames: ${diagnostic.otherSensorDataFrames - baseline.otherSensorDataFrames}; motion service: ${diagnostic.motionServiceId ?: "not advertised"}\n" +
                             "This attempt: warm-up ${gate.warmingUp}, low quality ${gate.lowQuality}, duplicates ${gate.duplicates}\n" +
                             "Last parser rejection: ${if (diagnostic.rejectedFrames > baseline.rejectedFrames) diagnostic.lastRejection else "none"}"
                         mutableState.update { it.copy(heartDiagnostics = text) }
@@ -102,7 +123,13 @@ class AirPodsExperiments(private val service: AirPodsService) {
                     if (sameConnection()) withContext(Dispatchers.IO) { sendHeart(token) { manager.sendHeartRateStopFrame() } }
                     delay(1000)
                 }
-                mutableState.update { it.copy(heartStatus = "No sustained readings. Reconnect, reseat the earbud, and retry.") }
+                val diagnostic = manager.heartRateDiagnostics()
+                val reason = when {
+                    diagnostic.parsedSamples > baseline.parsedSamples -> "Sensor data arrived, but no sustained quality reading. Reseat the earbud and retry."
+                    diagnostic.acknowledgements > baseline.acknowledgements -> "Start acknowledged, but no heart-rate measurements. Sensor activation remains unresolved."
+                    else -> "No heart-rate acknowledgement or measurements. Reconnect and retry."
+                }
+                mutableState.update { it.copy(heartStatus = reason) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableState.update { it.copy(heartStatus = error.message ?: "Heart-rate test failed") } }
             finally { if (token == heartGeneration) { stopHeartCommands(); mutableState.update { it.copy(heartActive = false, bpm = null) } } }
@@ -122,7 +149,14 @@ class AirPodsExperiments(private val service: AirPodsService) {
             mutableState.update { it.copy(bpm = sample.bpm, heartSamples = it.heartSamples + 1, heartStatus = "Live experimental reading") }
         }
     }
+    private fun stopMotionProbe() = synchronized(manager) {
+        val id = motionProbeService ?: return@synchronized
+        if (sameConnection() && !service.isHeadTrackingActive) manager.sendMotionProbeStop(id)
+        motionProbeService = null
+    }
+
     private fun stopHeartCommands() {
+        stopMotionProbe()
         if (sameConnection()) {
             manager.sendHeartRateStopFrame()
             manager.sendControlCommand(ControlCommandIdentifiers.HRM_STATE.value, byteArrayOf(heartBefore ?: 2))

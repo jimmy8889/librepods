@@ -224,3 +224,26 @@ pin action in app settings, separate from Quick Settings. It uses the launcher's
 pin flow and confirms success only from the completion callback, which also
 refreshes widget content. Unsupported/failed requests show manual placement
 instructions. No extra permissions are requested.
+
+## Heart-rate sensor-channel investigation (2026-09-26)
+
+The owner confirms the combined widget works and requested renewed HR work.
+ADB at the previous wireless endpoint timed out; a new port was requested.
+No live BPM has yet been verified on this pair.
+
+Reference: https://github.com/librepods-org/librepods/pull/702 (SAGIRIxr's
+first-hand captures report ACK-only failures until RTBuddy produces other sensor
+data; this is a hypothesis to test here, not a verified fix).
+
+The foreground experiment now distinguishes service-setting acknowledgements
+(field 9) from HR payloads and counts opaque sensor-stream frames (field 3)
+without interpreting them as BPM. Metadata discovery is limited to descriptor
+field 5 and recognizes devmotion6 independently of HeartRateService. Motion
+service IDs are never guessed. After the unchanged initial HR attempt, retries
+briefly start an advertised motion service at 40 ms, wait at most eight seconds
+for channel data, and stop that probe before starting HR. Existing app head
+tracking is preserved; leaving the test also cleans up an owned motion probe.
+No continuous background HR or extra BLE scans were added. Quality and payload
+validation remain unchanged. Added parser/diagnostic/control regression tests.
+The test screen also has Copy sensor diagnostics so the owner can return
+counts/status without sharing raw packets or BPM values.

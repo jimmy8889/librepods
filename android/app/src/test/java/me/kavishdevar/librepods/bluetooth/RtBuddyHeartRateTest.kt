@@ -89,4 +89,59 @@ class RtBuddyHeartRateTest {
         assertEquals(1, result.rejectionReasons[HeartRateRejectionReason.CONTROL_RESPONSE])
         assertEquals(setOf(5), result.rejectedPayloadLengths)
     }
+
+    @Test fun countsAcknowledgementsSeparatelyFromMeasurements() {
+        val parser = decoder()
+        val result = parser.feed(frame(byteArrayOf(8,1,0x4a,2,8,19)))
+        assertTrue(result.samples.isEmpty())
+        assertEquals(0, result.rejectedFrameCount)
+        assertTrue(result.suppressRawLogging)
+        assertEquals(1L, parser.channelDiagnostics().heartAcknowledgements)
+        assertEquals(0L, parser.channelDiagnostics().otherSensorDataFrames)
+    }
+    @Test fun fragmentedAcknowledgementCountsOnceAndUsesDiscoveredService() {
+        val parser = decoder()
+        parser.feed(metadata(23, "HeartRateService"))
+        val ack = frame(byteArrayOf(8,1,0x4a,2,8,23))
+        parser.feed(ack.copyOfRange(0, 13))
+        assertEquals(0L, parser.channelDiagnostics().heartAcknowledgements)
+        parser.feed(ack.copyOfRange(13, ack.size))
+        parser.feed(frame(byteArrayOf(8,1,0x4a,2,8,19)))
+        assertEquals(1L, parser.channelDiagnostics().heartAcknowledgements)
+    }
+    @Test fun motionDiscoveryDoesNotGuessIdsAndCannotBecomeHeartRate() {
+        val parser = decoder()
+        assertNull(parser.channelDiagnostics().motionServiceId)
+        parser.feed(metadata(19, "devmotion6"))
+        assertEquals(19, parser.channelDiagnostics().motionServiceId)
+        assertNull(parser.heartRateServiceIdForControl())
+        assertTrue(parser.feed(sample()).samples.isEmpty())
+        parser.feed(metadata(23, "HeartRateService"))
+        assertEquals(72, parser.feed(sample(service=23)).samples.single().bpm)
+    }
+    @Test fun channelActivityIsNotHeartRateAndResetClearsDiscovery() {
+        val parser = decoder()
+        parser.feed(metadata(16, "devmotion6"))
+        val result = parser.feed(frame(byteArrayOf(8,1,0x10,3,0x1a,3,0x10,0x20,0x30)))
+        assertTrue(result.samples.isEmpty())
+        assertEquals(1L, parser.channelDiagnostics().otherSensorDataFrames)
+        parser.reset()
+        assertNull(parser.channelDiagnostics().motionServiceId)
+        assertEquals(0L, parser.channelDiagnostics().otherSensorDataFrames)
+        assertEquals(0L, parser.channelDiagnostics().heartAcknowledgements)
+    }
+    @Test fun motionProbeUsesFortyMillisecondIntervalAndStopUsesZero() {
+        val frames = RtBuddyHeartRateControlFrames(initialSequence = 1)
+        val start = frames.start(16, 40_000)
+        assertArrayEquals(byteArrayOf(1,0x40,0x9c.toByte(),0,0), start.takeLast(5).toByteArray())
+        val stop = frames.stop(16)
+        assertArrayEquals(byteArrayOf(1,0,0,0,0), stop.takeLast(5).toByteArray())
+        assertFalse(start.contentEquals(stop))
+    }
+    @Test fun metadataMarkersInsideOtherEnvelopeFieldsAreNotDiscovery() {
+        val parser = decoder()
+        val fake = metadata(16, "devmotion6").apply { this[12] = 0x4a }
+        parser.feed(fake)
+        assertNull(parser.channelDiagnostics().motionServiceId)
+    }
 }

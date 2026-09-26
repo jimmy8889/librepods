@@ -76,6 +76,15 @@ internal class RtBuddyHeartRateDecoder(
     private val wallClockMillis: () -> Long = System::currentTimeMillis,
     private val elapsedRealtimeMillis: () -> Long = SystemClock::elapsedRealtime
 ) {
+    private var motionServiceId: Int? = null
+    private var heartAcknowledgements = 0L
+    private var otherSensorDataFrames = 0L
+    data class ChannelDiagnostics(val motionServiceId: Int?, val heartAcknowledgements: Long,
+        val otherSensorDataFrames: Long)
+
+    @Synchronized
+    fun channelDiagnostics() = ChannelDiagnostics(motionServiceId, heartAcknowledgements, otherSensorDataFrames)
+
     private var carry = ByteArray(0)
     private var discoveredHeartRateServiceId: Int? = null
     private val explicitlyNonHeartRateServiceIds = mutableSetOf<Int>()
@@ -83,6 +92,9 @@ internal class RtBuddyHeartRateDecoder(
     @Synchronized
     fun reset() {
         carry = ByteArray(0)
+        motionServiceId = null
+        heartAcknowledgements = 0
+        otherSensorDataFrames = 0
         discoveredHeartRateServiceId = null
         explicitlyNonHeartRateServiceIds.clear()
     }
@@ -200,6 +212,16 @@ internal class RtBuddyHeartRateDecoder(
         ) ?: return FrameClassification()
 
         val metadataRecords = updateServiceMetadata(frame, topLevel)
+        // Field 9 is a service-setting acknowledgement, never a sensor measurement.
+        val acknowledgements = topLevel.fields.filter { it.number == 9 && it.wireType == WIRE_LENGTH_DELIMITED }
+        acknowledgements.forEach { field ->
+            val service = parseProtoMessage(frame, field.valueStart, field.valueEnd)?.firstVarint(FIELD_SERVICE)?.toInt()
+            if (service != null && isHeartRateService(service)) heartAcknowledgements++
+        }
+        // Opaque stream data (field 3) is evidence of sensor-channel activity, not BPM.
+        if (topLevel.fields.any { it.number == 3 && it.wireType == WIRE_LENGTH_DELIMITED && it.valueEnd > it.valueStart }) {
+            otherSensorDataFrames++
+        }
 
         val sequence = topLevel.firstVarint(FIELD_SEQUENCE)?.toInt() ?: -1
         val logType = topLevel.firstVarint(FIELD_LOG_TYPE)?.toInt() ?: -1
@@ -222,7 +244,7 @@ internal class RtBuddyHeartRateDecoder(
         }
 
         if (commands.isEmpty()) {
-            return FrameClassification(consumed = metadataRecords.isNotEmpty())
+            return FrameClassification(consumed = metadataRecords.isNotEmpty() || acknowledgements.isNotEmpty())
         }
         if (logType !in LIVE_SENSOR_DATA_LOG_TYPES) {
             return FrameClassification(
@@ -266,7 +288,7 @@ internal class RtBuddyHeartRateDecoder(
     ): Set<MetadataRecord> {
         val metadataRecords = mutableSetOf<MetadataRecord>()
         topLevel.fields.forEach { field ->
-            if (field.wireType != WIRE_LENGTH_DELIMITED) return@forEach
+            if (field.number != 5 || field.wireType != WIRE_LENGTH_DELIMITED) return@forEach
             val serviceRecord = parseProtoMessage(data, field.valueStart, field.valueEnd)
                 ?: return@forEach
             val serviceId = serviceRecord.firstVarint(FIELD_SERVICE)?.toInt()
@@ -291,7 +313,15 @@ internal class RtBuddyHeartRateDecoder(
                 )
             }
 
-            if (identifiesHeartRate || identifiesHostLibHid) {
+            val identifiesMotion = metadataFields.any { metadata ->
+                data.containsBytes("devmotion6".encodeToByteArray(), metadata.valueStart, metadata.valueEnd)
+            }
+            if (identifiesMotion && !identifiesHeartRate && !identifiesHostLibHid) {
+                motionServiceId = serviceId
+                explicitlyNonHeartRateServiceIds += serviceId
+                if (discoveredHeartRateServiceId == serviceId) discoveredHeartRateServiceId = null
+            }
+            if (identifiesHeartRate || identifiesHostLibHid || identifiesMotion) {
                 metadataRecords += MetadataRecord(field.valueStart, field.valueEnd)
             }
             when {
@@ -553,7 +583,7 @@ internal class RtBuddyHeartRateDecoder(
         const val MIN_BPM = 30
         const val MAX_BPM = 220
 
-        val SENSOR_DATA_COMMAND_FIELDS = setOf(5, 7, 8, 9, 12)
+        val SENSOR_DATA_COMMAND_FIELDS = setOf(5, 7, 8, 12)
         const val MAX_COMMAND_ENVELOPE_DEPTH = 3
         const val MAX_PAYLOAD_WRAPPER_DEPTH = 3
         const val MAX_COMMANDS_PER_FRAME = 16
@@ -591,8 +621,8 @@ internal class RtBuddyHeartRateControlFrames(
     }
 
     @Synchronized
-    fun start(serviceId: Int): ByteArray =
-        buildFrame(serviceId, takeSequence(), HEART_RATE_INTERVAL_MICROS)
+    fun start(serviceId: Int, intervalMicros: Int = HEART_RATE_INTERVAL_MICROS): ByteArray =
+        buildFrame(serviceId, takeSequence(), intervalMicros)
 
     @Synchronized
     fun stop(serviceId: Int): ByteArray =

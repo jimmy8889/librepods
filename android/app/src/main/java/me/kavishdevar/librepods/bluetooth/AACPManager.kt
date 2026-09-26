@@ -337,6 +337,10 @@ class AACPManager {
         return sendPacket(createDataPacket(data))
     }
 
+    private val motionProbeFrames = RtBuddyHeartRateControlFrames(initialSequence = 10_000)
+    fun sendMotionProbeStart(serviceId: Int): Boolean = sendPacket(motionProbeFrames.start(serviceId, 40_000))
+    fun sendMotionProbeStop(serviceId: Int): Boolean = sendPacket(motionProbeFrames.stop(serviceId))
+
     fun sendHeartRateStartFrame(): Boolean = sendHeartRateControlFrame(start = true)
 
     fun sendHeartRateStopFrame(): Boolean = sendHeartRateControlFrame(start = false)
@@ -483,7 +487,10 @@ class AACPManager {
         val rejectedFrames: Long,
         val serviceId: Int?,
         val discovered: Boolean,
-        val lastRejection: String?
+        val lastRejection: String?,
+        val motionServiceId: Int?,
+        val acknowledgements: Long,
+        val otherSensorDataFrames: Long
     )
     private val experimentDiagnosticsLock = Any()
     private var rtBuddyChunks = 0L
@@ -493,9 +500,11 @@ class AACPManager {
 
     fun heartRateDiagnostics(): HeartRateDiagnostics {
         val resolution = heartRateDecoder.heartRateServiceResolution()
+        val channel = heartRateDecoder.channelDiagnostics()
         return synchronized(experimentDiagnosticsLock) {
             HeartRateDiagnostics(rtBuddyChunks, parsedHeartSamples, rejectedHeartFrames,
-                resolution.serviceId, resolution.discoveredFromMetadata, lastHeartRejection)
+                resolution.serviceId, resolution.discoveredFromMetadata, lastHeartRejection,
+                channel.motionServiceId, channel.heartAcknowledgements, channel.otherSensorDataFrames)
         }
     }
 
@@ -1479,6 +1488,7 @@ class AACPManager {
         Log.d(TAG, "Disconnected, clearing state")
         heartRateDecoder.reset()
         heartRateControlSession.reset()
+        motionProbeFrames.reset()
         resetHeartRateDiagnostics()
         controlCommandStatusList.clear()
         controlCommandListeners.clear()
