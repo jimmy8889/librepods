@@ -247,3 +247,10 @@ No continuous background HR or extra BLE scans were added. Quality and payload
 validation remain unchanged. Added parser/diagnostic/control regression tests.
 The test screen also has Copy sensor diagnostics so the owner can return
 counts/status without sharing raw packets or BPM values.
+
+## Connection popup preference (2026-09-26)
+
+Removed the bottom popup and its setting. The existing top popup now has a
+two-second deadline, including its exit animation; touches do not extend it.
+The deadline removes the overlay immediately and stops video playback, even
+if an animated dismissal is in progress. Heart-rate investigation is unchanged.

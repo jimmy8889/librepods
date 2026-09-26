@@ -240,15 +240,8 @@ fun AppSettingsScreen(
         if (state.connectionSuccessful) {
             StyledList(title = stringResource(R.string.popup_animations)) {
                 StyledToggle(
-                    label = stringResource(R.string.show_bottom_sheet_popup),
-                    description = stringResource(R.string.show_bottom_sheet_popup_description),
-                    checked = state.showBottomSheetPopup,
-                    onCheckedChange = viewModel::setShowBottomSheetPopup,
-                )
-
-                StyledToggle(
                     label = stringResource(R.string.show_island_popup),
-                    description = stringResource(R.string.show_island_popup_description),
+                    description = "Show a top-screen popup that disappears after two seconds",
                     checked = state.showIslandPopup,
                     onCheckedChange = viewModel::setShowIslandPopup,
                 )

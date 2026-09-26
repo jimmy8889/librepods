@@ -86,6 +86,7 @@ class IslandWindow(private val context: Context) {
     private var lastTouchY = 0f
     private var velocityTracker: VelocityTracker? = null
     private var isBeingDragged = false
+    private var autoCloseDeadline = 0L
     private var autoCloseHandler: Handler? = null
     private var autoCloseRunnable: Runnable? = null
     private var initialHeight = 0
@@ -169,6 +170,7 @@ class IslandWindow(private val context: Context) {
         if (ServiceManager.getService()?.islandOpen == true) return
         else ServiceManager.getService()?.islandOpen = true
 
+        autoCloseDeadline = android.os.SystemClock.uptimeMillis() + 2_000L
         val displayMetrics = Resources.getSystem().displayMetrics
         val width = (displayMetrics.widthPixels * 0.95).toInt()
         screenHeight = displayMetrics.heightPixels
@@ -260,7 +262,6 @@ class IslandWindow(private val context: Context) {
         containerView.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return@setOnTouchListener false)
                     flingAnimator.cancel()
 
                     velocityTracker?.recycle()
@@ -299,7 +300,6 @@ class IslandWindow(private val context: Context) {
                         isBeingDragged = true
 
                         // Cancel auto close timer when dragging starts
-                        autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return@setOnTouchListener false)
 
                         val dampedDeltaY = if (deltaY > 0) {
                             initialY + (deltaY * 0.6f)
@@ -470,10 +470,11 @@ class IslandWindow(private val context: Context) {
     }
 
     private fun resetAutoCloseTimer() {
-        autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
+        autoCloseRunnable?.let { autoCloseHandler?.removeCallbacks(it) }
         autoCloseHandler = Handler(Looper.getMainLooper())
-        autoCloseRunnable = Runnable { close() }
-        autoCloseHandler?.postDelayed(autoCloseRunnable!!, 4500)
+        autoCloseRunnable = Runnable { forceClose() }
+        val remaining = (autoCloseDeadline - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0L)
+        autoCloseHandler?.postDelayed(autoCloseRunnable!!, remaining)
     }
 
     private fun springBackWithInertia(velocity: Float) {
@@ -664,7 +665,6 @@ class IslandWindow(private val context: Context) {
             }
 
             ServiceManager.getService()?.islandOpen = false
-            autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
 
             resetStretchEffects()
 
@@ -700,6 +700,7 @@ class IslandWindow(private val context: Context) {
             Handler(Looper.getMainLooper()).post { cleanupAndRemoveView() }
             return
         }
+        autoCloseRunnable?.let { autoCloseHandler?.removeCallbacks(it) }
         try {
             containerView.visibility = View.GONE
         } catch (e: Exception) {
@@ -732,7 +733,6 @@ class IslandWindow(private val context: Context) {
             return
         }
         try {
-            if (isClosing) return
             isClosing = true
 
             try {
@@ -742,17 +742,18 @@ class IslandWindow(private val context: Context) {
             }
 
             ServiceManager.getService()?.islandOpen = false
-            autoCloseHandler?.removeCallbacks(autoCloseRunnable ?: return)
+            autoCloseRunnable?.let { autoCloseHandler?.removeCallbacks(it) }
+
+            islandView.findViewById<VideoView>(R.id.island_video_view).stopPlayback()
 
             // Cancel all ongoing animations
             springAnimation.cancel()
             flingAnimator.cancel()
 
-            // Immediately remove the view without animations
-            cleanupAndRemoveView()
         } catch (e: Exception) {
             e.printStackTrace()
-            isClosing = false
+        } finally {
+            cleanupAndRemoveView()
         }
     }
 }

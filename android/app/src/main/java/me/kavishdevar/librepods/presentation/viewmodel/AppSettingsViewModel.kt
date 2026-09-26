@@ -33,7 +33,6 @@ data class AppSettingsUiState(
     val vendorIdHook: Boolean = false,
     val isPremium: Boolean = !BuildConfig.PLAY_BUILD,
     val connectionSuccessful: Boolean = false,
-    val showBottomSheetPopup: Boolean = true,
     val showIslandPopup: Boolean = true,
     val timeUntilFOSSPremiumExpiry: Long = 0L,
     val m3eEnabled: Boolean = false
@@ -151,7 +150,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 cameraPackageValue = sharedPreferences.getString("custom_camera_package", "") ?: "",
                 vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false),
                 connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false),
-                showBottomSheetPopup = sharedPreferences.getBoolean("show_bottom_sheet_popup", true),
                 showIslandPopup = sharedPreferences.getBoolean("show_island_popup", true),
                 m3eEnabled = sharedPreferences.getBoolean("m3e_enabled", true)
             )
@@ -237,11 +235,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
     fun setVendorIdHook(enabled: Boolean) {
         xposedRemotePref.putBoolean("vendor_id_hook", enabled)
         _uiState.update { it.copy(vendorIdHook = enabled) }
-    }
-
-    fun setShowBottomSheetPopup(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean("show_bottom_sheet_popup", enabled) }
-        _uiState.update { it.copy(showBottomSheetPopup = enabled) }
     }
 
     fun setShowIslandPopup(enabled: Boolean) {
