@@ -11,7 +11,7 @@
         tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <!-- This fork keeps status in Quick Settings, not the notification drawer. -->
+    <!-- This fork keeps status in the combined AirPods widget. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -68,29 +68,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/reconnect_widget_info" />
         </receiver>
-        <receiver
-            android:name=".presentation.widgets.NoiseControlWidget"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
 
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/noise_control_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".presentation.widgets.BatteryWidget"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/battery_widget_info" />
-        </receiver>
 
         <activity
             android:name=".MainActivity"
@@ -110,14 +88,6 @@
             </intent-filter> -->
         </activity>
 
-        <activity
-            android:name=".QuickSettingsDialogActivity"
-            android:exported="false"
-            android:theme="@style/Theme.TransparentDialog"
-            android:launchMode="singleTask"
-            android:excludeFromRecents="true"
-            android:taskAffinity=""
-             />
 
         <service
             android:name=".services.AirPodsService"
@@ -125,22 +95,6 @@
             android:exported="true"
             android:foregroundServiceType="connectedDevice"
             android:permission="android.permission.BLUETOOTH_CONNECT" />
-        <service
-            android:name=".services.AirPodsQSService"
-            android:exported="true"
-            android:icon="@drawable/airpods"
-            android:label="@string/qs_airpods_modes"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-        </service>
-        <service android:name=".services.AirPodsReconnectQSService"
-            android:exported="true" android:icon="@drawable/reconnect_widget_icon"
-            android:label="@string/reconnect_widget_name"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
-        </service>
 <!--        <service-->
 <!--            android:name=".services.AppListenerService"-->
 <!--            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"-->

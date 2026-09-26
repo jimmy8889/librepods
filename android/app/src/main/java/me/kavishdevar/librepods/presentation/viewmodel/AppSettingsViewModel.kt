@@ -16,7 +16,6 @@ import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import kotlin.math.roundToInt
 
 data class AppSettingsUiState(
-    val showPhoneBatteryInWidget: Boolean = false,
     val conversationalAwarenessPauseMusicEnabled: Boolean = false,
     val relativeConversationalAwarenessVolumeEnabled: Boolean = true,
     val disconnectWhenNotWearing: Boolean = false,
@@ -138,7 +137,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 
         _uiState.update { currentState ->
             currentState.copy(
-                showPhoneBatteryInWidget = sharedPreferences.getBoolean("show_phone_battery_in_widget", false),
                 conversationalAwarenessPauseMusicEnabled = sharedPreferences.getBoolean("conversational_awareness_pause_music", false),
                 relativeConversationalAwarenessVolumeEnabled = sharedPreferences.getBoolean("relative_conversational_awareness_volume", true),
                 disconnectWhenNotWearing = sharedPreferences.getBoolean("disconnect_when_not_wearing", false),
@@ -158,11 +156,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 m3eEnabled = sharedPreferences.getBoolean("m3e_enabled", true)
             )
         }
-    }
-
-    fun setShowPhoneBatteryInWidget(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean("show_phone_battery_in_widget", enabled) }
-        _uiState.update { it.copy(showPhoneBatteryInWidget = enabled) }
     }
 
     fun setConversationalAwarenessPauseMusicEnabled(enabled: Boolean) {

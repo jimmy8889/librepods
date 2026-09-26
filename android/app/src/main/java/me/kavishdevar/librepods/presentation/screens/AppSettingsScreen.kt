@@ -208,15 +208,6 @@ fun AppSettingsScreen(
         }
 
         if (state.connectionSuccessful) {
-            StyledToggle(
-                title = stringResource(R.string.widget),
-                label = stringResource(R.string.show_phone_battery_in_widget),
-                description = stringResource(R.string.show_phone_battery_in_widget_description),
-                checked = state.showPhoneBatteryInWidget,
-                onCheckedChange = viewModel::setShowPhoneBatteryInWidget,
-                enabled = state.isPremium
-            )
-
             StyledList(title = stringResource(R.string.popup_animations)) {
                 StyledToggle(
                     label = stringResource(R.string.show_bottom_sheet_popup),

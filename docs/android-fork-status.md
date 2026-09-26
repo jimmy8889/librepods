@@ -195,3 +195,11 @@ one high; width is resizable with a 300dp minimum. Battery, mode, connection and
 Off-setting events refresh the row. Duplicate snapshots are suppressed, there
 are no periodic updates or extra scans, and notification drawer cards stay off.
 No phone is currently attached to validate launcher sizing or widget taps.
+
+## Single control surface (2026-09-26)
+
+Removed the old Battery and Noise Control widget providers and both Quick
+Settings tiles, plus their unused activity and service/widget implementations.
+Only the combined AirPods controls row remains in the widget picker. Its existing
+ReconnectWidget component is retained so the previous combined row updates in
+place. Old separate widgets may leave launcher placeholders to remove.
