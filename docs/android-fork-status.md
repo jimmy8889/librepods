@@ -327,3 +327,26 @@ A separate voice client could consume this stream with OpenAI's audio API, but
 that would be a new integration, not an upgrade to the official ChatGPT app.
 https://developer.android.com/reference/android/media/AudioManager
 https://developers.openai.com/api/docs/guides/realtime-websocket
+
+### Diagnose accepted exports missing from Samsung Health
+
+Owner screenshot confirms daily sessions say Sent to Health Connect. This flag is
+set only after insertRecords succeeds; it does not confirm Samsung imported them.
+Daily and movement-triggered samples were incorrectly labelled actively recorded.
+They now use autoRecorded; user-started workouts keep activelyRecorded. Stable
+client IDs are preserved and version increases to 2 so resending corrects metadata
+without creating another set of Health Connect records. This is a correctness fix,
+not a proven explanation for Samsung's missing history.
+
+Saved sessions now offer Check Health Connect: foreground read-back filtered to
+LibrePods data origin and exact client IDs, paginated, comparing timestamps/BPM
+against local samples. Android's service permits own-data reads with write access;
+no additional read permissions are requested. Read failures are reported as
+unverified, never as missing data. Resend is also available on previously exported
+sessions. The UI explicitly distinguishes successful export from Samsung import.
+Samsung ingestion and phone read-back still require owner testing.
+
+Sources:
+https://developer.android.com/health-and-fitness/health-connect/metadata
+https://developer.samsung.com/health/blog/en/accessing-samsung-health-data-through-health-connect
+https://android.googlesource.com/platform/packages/modules/HealthFitness/+/refs/heads/android17-release/service/java/com/android/server/healthconnect/HealthConnectServiceImpl.java

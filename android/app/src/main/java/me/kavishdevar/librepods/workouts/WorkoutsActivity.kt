@@ -28,6 +28,7 @@ class WorkoutsActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var bound = false
     private var pendingExport: String? = null
+    private var checkedSession by mutableStateOf<String?>(null)
     private var pendingMovement: Boolean? = null
     private val activityPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
         pendingMovement = granted
@@ -57,6 +58,8 @@ class WorkoutsActivity : ComponentActivity() {
     }
     private fun export(id: String) {
         if (busy) return
+        checkedSession = id
+        message = "Sending to Health Connect…"
         busy = true
         lifecycleScope.launch {
             try {
@@ -64,6 +67,18 @@ class WorkoutsActivity : ComponentActivity() {
                 message = "Saved to Health Connect. Open Samsung Health to let it sync."
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { message = e.message ?: "Sync failed. Your local session is saved; you can retry." }
+            finally { busy = false }
+        }
+    }
+    private fun verify(id: String) {
+        if (busy) return
+        checkedSession = id
+        message = "Checking saved readings in Health Connect…"
+        busy = true
+        lifecycleScope.launch {
+            try { message = WorkoutHealthConnect.verify(this@WorkoutsActivity, id) }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { message = "Could not verify Health Connect: ${e.message ?: e.javaClass.simpleName}. This does not mean the readings are missing. You can inspect Heart rate entries using Open Health Connect." }
             finally { busy = false }
         }
     }
@@ -139,8 +154,14 @@ class WorkoutsActivity : ComponentActivity() {
                         Text("${item.type} • ${DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT).format(Date(item.start))}")
                         Text("${item.count} readings • average ${item.average ?: "—"} BPM • ${item.minimum ?: "—"}–${item.maximum ?: "—"} BPM")
                         Text(item.outcome)
-                        if (item.exported) Text("Sent to Health Connect")
-                        if (!item.exported && item.count > 0) OutlinedButton(onClick = { connectHealth(item.id) }, enabled = !busy) { Text("Send to Health Connect") }
+                        if (item.exported) Text("Sent to Health Connect • Samsung Health import not confirmed")
+                        if (item.count > 0) {
+                            OutlinedButton(onClick = { if (item.exported) export(item.id) else connectHealth(item.id) }, enabled = !busy) {
+                                Text(if (item.exported) "Resend to Health Connect" else "Send to Health Connect")
+                            }
+                            TextButton(onClick = { verify(item.id) }, enabled = !busy) { Text("Check Health Connect") }
+                        }
+                        if (checkedSession == item.id && message.isNotBlank()) Text(message)
                         TextButton(onClick = { deleteId = item.id }, enabled = !busy) { Text("Delete local session") }
                     } }
                 }

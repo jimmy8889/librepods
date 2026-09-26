@@ -5,6 +5,9 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -26,10 +29,13 @@ object WorkoutHealthConnect {
         require(workout.points.all { it.time in w.start until end && it.bpm in 30..220 }) { "Workout samples are outside the saved session." }
         val zone = ZoneId.systemDefault()
         val device = Device(type = Device.TYPE_UNKNOWN, manufacturer = "Apple", model = "AirPods Pro 3")
-        fun metadata(id: String) = Metadata.activelyRecorded(device = device,
-            clientRecordId = "librepods:${w.id}:$id", clientRecordVersion = 1)
+        val automatic = w.type in listOf("Daily readings", "Activity readings")
+        fun metadata(id: String) = if (automatic) Metadata.autoRecorded(device = device,
+            clientRecordId = "librepods:${w.id}:$id", clientRecordVersion = 2)
+        else Metadata.activelyRecorded(device = device,
+            clientRecordId = "librepods:${w.id}:$id", clientRecordVersion = 2)
         val result = mutableListOf<Record>()
-        if (w.type !in listOf("Daily readings", "Activity readings")) result += ExerciseSessionRecord(
+        if (!automatic) result += ExerciseSessionRecord(
             startTime = Instant.ofEpochMilli(w.start), startZoneOffset = zone.rules.getOffset(Instant.ofEpochMilli(w.start)),
             endTime = Instant.ofEpochMilli(end), endZoneOffset = zone.rules.getOffset(Instant.ofEpochMilli(end)),
             exerciseType = types[w.type] ?: ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
@@ -44,6 +50,40 @@ object WorkoutHealthConnect {
         }
         return result
     }
+    /** Foreground, user-requested read-back of our own records only. No Samsung data is read. */
+    suspend fun verify(context: Context, id: String): String {
+        check(HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) { "Health Connect is unavailable." }
+        val workout = WorkoutStore.get(context).load(id)
+        val expected = records(workout).filterIsInstance<HeartRateRecord>()
+        val ids = expected.map { it.metadata.clientRecordId }.toSet()
+        val client = HealthConnectClient.getOrCreate(context)
+        val actual = mutableListOf<HeartRateRecord>()
+        var token: String? = null
+        do {
+            val response = client.readRecords(ReadRecordsRequest(
+                recordType = HeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(Instant.ofEpochMilli(workout.summary.start),
+                    Instant.ofEpochMilli(requireNotNull(workout.summary.end))),
+                dataOriginFilter = setOf(DataOrigin(context.packageName)), pageToken = token))
+            actual += response.records.filter { it.metadata.clientRecordId in ids }
+            token = response.pageToken
+        } while (!token.isNullOrEmpty())
+        return verificationMessage(expected, actual)
+    }
+
+    internal fun verificationMessage(expected: List<HeartRateRecord>, actual: List<HeartRateRecord>): String {
+        val wanted = expected.flatMap { record -> record.samples.map {
+            Triple(record.metadata.clientRecordId, it.time, it.beatsPerMinute)
+        } }.toSet()
+        val found = actual.flatMap { record -> record.samples.map {
+            Triple(record.metadata.clientRecordId, it.time, it.beatsPerMinute)
+        } }.toSet()
+        val matched = wanted.intersect(found).size
+        return if (wanted.isNotEmpty() && matched == wanted.size && found == wanted)
+            "Verified $matched readings in Health Connect. Samsung Health import is not confirmed. If they are missing there, open Samsung Health and check its heart-rate history for this session’s date and time."
+        else "$matched of ${wanted.size} readings match in Health Connect. Use Resend to Health Connect to restore this session."
+    }
+
     suspend fun export(context: Context, id: String) {
         check(HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) { "Health Connect needs to be installed or updated." }
         val client = HealthConnectClient.getOrCreate(context)

@@ -60,6 +60,27 @@ class WorkoutTest {
             assertTrue(WorkoutHealthConnect.records(workout(it)).all { record -> record is HeartRateRecord })
         }
     }
+    @Test fun automaticReadingsUseAutomaticMetadataAndSameStableIds() {
+        listOf("Daily readings", "Activity readings").forEach { type ->
+            val records = WorkoutHealthConnect.records(workout(type))
+            assertTrue(records.all { it.metadata.recordingMethod == androidx.health.connect.client.records.metadata.Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED })
+            assertTrue(records.all { it.metadata.clientRecordVersion == 2L })
+            assertEquals(listOf("librepods:stable-id:heart:0", "librepods:stable-id:heart:1"), records.map { it.metadata.clientRecordId })
+        }
+        assertTrue(WorkoutHealthConnect.records(workout()).all {
+            it.metadata.recordingMethod == androidx.health.connect.client.records.metadata.Metadata.RECORDING_METHOD_ACTIVELY_RECORDED })
+    }
+    @Test fun verificationRequiresTheActualSamplesNotJustRecordCount() {
+        val expected = WorkoutHealthConnect.records(workout()).filterIsInstance<HeartRateRecord>()
+        assertTrue(WorkoutHealthConnect.verificationMessage(expected, expected).startsWith("Verified 3 readings"))
+        assertTrue(WorkoutHealthConnect.verificationMessage(expected, emptyList()).startsWith("0 of 3"))
+        assertTrue(WorkoutHealthConnect.verificationMessage(expected, expected.take(1)).startsWith("2 of 3"))
+        val wrong = expected.first().let { record -> HeartRateRecord(
+            startTime = record.startTime, startZoneOffset = record.startZoneOffset,
+            endTime = record.endTime, endZoneOffset = record.endZoneOffset,
+            samples = record.samples.map { HeartRateRecord.Sample(it.time, 120) }, metadata = record.metadata) }
+        assertTrue(WorkoutHealthConnect.verificationMessage(expected, listOf(wrong, expected.last())).startsWith("1 of 3"))
+    }
     @Test(expected = IllegalArgumentException::class) fun unfinishedSessionCannotBeExported() { WorkoutHealthConnect.records(workout(end=null)) }
     @Test(expected = IllegalArgumentException::class) fun invalidSampleCannotBeExported() {
         WorkoutHealthConnect.records(workout().copy(points=listOf(WorkoutPoint(500,75))))
