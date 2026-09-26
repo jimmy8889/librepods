@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:description="@string/reconnect_widget_description"
-    android:initialLayout="@layout/reconnect_widget"
-    android:previewLayout="@layout/reconnect_widget"
-    android:minWidth="56dp" android:minHeight="56dp"
-    android:targetCellWidth="1" android:targetCellHeight="1"
-    android:resizeMode="horizontal|vertical" android:updatePeriodMillis="0"
+    android:description="@string/row_description"
+    android:initialLayout="@layout/airpods_control_row"
+    android:previewLayout="@layout/airpods_control_row"
+    android:minWidth="300dp" android:minHeight="56dp"
+    android:minResizeWidth="300dp"
+    android:targetCellWidth="5" android:targetCellHeight="1"
+    android:resizeMode="horizontal" android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

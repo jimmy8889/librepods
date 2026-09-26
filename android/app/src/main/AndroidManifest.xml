@@ -64,7 +64,7 @@
         <activity android:name=".experimental.ExperimentsActivity" android:exported="false" />
         <activity android:name=".finding.FindAirPodsActivity" android:exported="false" />
         <receiver android:name=".presentation.widgets.ReconnectWidget"
-            android:label="@string/reconnect_widget_name" android:exported="false">
+            android:label="@string/row_name" android:exported="false">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/reconnect_widget_info" />
         </receiver>

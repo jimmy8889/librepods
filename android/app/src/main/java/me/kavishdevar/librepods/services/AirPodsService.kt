@@ -1472,6 +1472,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     override fun onSharedPreferenceChanged(preferences: SharedPreferences?, key: String?) {
         if (preferences == null || key == null) return
+        if (key == "off_listening_mode") {
+            me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow.update(this)
+        }
 
         when (key) {
             "name" -> config.deviceName = preferences.getString(key, "AirPods") ?: "AirPods"
@@ -1825,6 +1828,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     }
 
     fun sendANCBroadcast() {
+        me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow.update(this)
         sendBroadcast(Intent(AirPodsNotifications.ANC_DATA).apply {
             putExtra("data", ancNotification.status)
             setPackage(packageName)
@@ -1832,6 +1836,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     }
 
     fun sendBatteryBroadcast() {
+        me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow.update(this)
         broadcastBatteryInformation()
         sendBroadcast(Intent(AirPodsNotifications.BATTERY_DATA).apply {
             putParcelableArrayListExtra("data", ArrayList(batteryNotification.getBattery()))
@@ -2044,6 +2049,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     fun updateNotificationContent(
         connected: Boolean, airpodsName: String? = null, batteryList: List<Battery>? = null
     ) {
+        me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow.update(this, connectionHint = connected)
         // Battery and mode information live in Quick Settings and widgets. Keep only the
         // mandatory foreground-service notice, created once in startForegroundNotification().
     }
@@ -3063,6 +3069,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     @SuppressLint("MissingPermission")
     override fun onDestroy() {
+        me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow.update(this, connectionHint = false)
         manualReconnectJob?.cancel()
         if (::experiments.isInitialized) experiments.close()
         clearPacketLogs()

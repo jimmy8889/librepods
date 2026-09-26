@@ -1,14 +1,12 @@
 package me.kavishdevar.librepods.presentation.widgets
 
 import android.Manifest
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import me.kavishdevar.librepods.R
@@ -17,18 +15,20 @@ import me.kavishdevar.librepods.services.AirPodsService
 /** A tap-only widget: no periodic updates, scans or background polling. */
 class ReconnectWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        val click = PendingIntent.getBroadcast(context, 0,
-            Intent(context, ReconnectWidget::class.java).setAction(ACTION_RECONNECT),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val views = RemoteViews(context.packageName, R.layout.reconnect_widget)
-        views.setOnClickPendingIntent(R.id.reconnect_widget_button, click)
-        manager.updateAppWidget(ids, views)
+        AirPodsControlRow.update(context, force = true)
+    }
+
+    override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager,
+        appWidgetId: Int, newOptions: android.os.Bundle) {
+        AirPodsControlRow.update(context, force = true)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action != ACTION_RECONNECT) return
-        requestReconnect(context)
+        when (intent.action) {
+            ACTION_RECONNECT -> requestReconnect(context)
+            AirPodsControlRow.ACTION_MODE -> AirPodsControlRow.selectMode(context, intent.getIntExtra("mode", -1))
+        }
     }
 
     companion object {

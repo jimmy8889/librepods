@@ -178,3 +178,20 @@ notification preferences are not changed with hidden APIs. On-device behavior
 after upgrade remains to be checked; build, signature and 22 unit tests pass.
 
 Reference: https://developer.android.com/develop/ui/compose/notifications/notification-permission
+
+## Combined AirPods control row (2026-09-26)
+
+The existing reconnect widget is upgraded in place to **AirPods controls**: one
+rounded horizontal row with L/R/case battery levels, Transparency (Hear), Noise
+Cancellation (ANC), Adaptive (Auto), Off where enabled, and reconnect (Connect).
+The active mode has a light selected background. Unsupported Adaptive and disabled
+Off controls are hidden; mode controls are disabled when disconnected. Tapping
+the battery area opens LibrePods. Reconnect retains the guarded service-start
+path. Unknown battery values remain dashes; charging indicators are retained.
+
+Add AirPods controls from the widget picker, or resize/re-add an existing small
+Reconnect widget to a full-width row. The suggested size is five cells wide and
+one high; width is resizable with a 300dp minimum. Battery, mode, connection and
+Off-setting events refresh the row. Duplicate snapshots are suppressed, there
+are no periodic updates or extra scans, and notification drawer cards stay off.
+No phone is currently attached to validate launcher sizing or widget taps.

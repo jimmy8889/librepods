@@ -313,4 +313,14 @@
     <string name="qs_airpods_battery_summary">L %1$s · R %2$s · C %3$s</string>
     <string name="airpods_background_title">LibrePods connection service</string>
     <string name="airpods_background_text">AirPods controls are available in Quick Settings.</string>
+    <string name="row_name">AirPods controls</string>
+    <string name="row_description">AirPods battery, listening modes and reconnect in one row</string>
+    <string name="row_battery_buds">L %1$s · R %2$s</string>
+    <string name="row_battery_case">Case %1$s</string>
+    <string name="row_battery_accessibility">AirPods battery: left %1$s, right %2$s, case %3$s. Open LibrePods.</string>
+    <string name="row_selected">, selected</string>
+    <string name="row_hear">Hear</string>
+    <string name="row_anc">ANC</string>
+    <string name="row_auto">Auto</string>
+    <string name="row_connect">Connect</string>
 </resources>
