@@ -291,4 +291,12 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="i_agree">I agree</string>
     <string name="compatibility_check_bypassed">Compatibility check bypassed. Are you sure your device is compatible?</string>
+    <string name="reconnect_widget_label">Reconnect</string>
+    <string name="reconnect_widget_name">Reconnect AirPods</string>
+    <string name="reconnect_widget_description">Tap to reconnect your saved AirPods</string>
+    <string name="reconnect_widget_setup">Open LibrePods and set up your AirPods and Bluetooth permissions first.</string>
+    <string name="reconnect_widget_bluetooth_off">Turn on Bluetooth to reconnect your AirPods.</string>
+    <string name="reconnect_widget_open_app">Open LibrePods to reconnect your AirPods.</string>
+    <string name="reconnect_widget_unpaired">Pair your saved AirPods in Bluetooth settings first.</string>
+    <string name="reconnect_widget_connecting">Reconnecting to AirPods…</string>
 </resources>

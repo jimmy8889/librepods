@@ -133,3 +133,13 @@ normal-use observation; these are not claimed as measured improvements.
 
 Android scan-mode reference:
 https://developer.android.com/reference/android/bluetooth/le/ScanSettings#SCAN_MODE_LOW_POWER
+
+## Reconnect widget (2026-09-26)
+
+Add **LibrePods → Reconnect AirPods** from the launcher's widget picker. The
+compact widget reconnects the saved paired AirPods using the existing AACP and
+audio connection path, starting the foreground service when needed. It checks
+Bluetooth permissions, saved setup and Bluetooth power before starting. Repeated
+taps during a manual connection attempt are ignored. It adds no periodic
+updates, scanning or polling. Nearby-device permissions and initial pairing
+must already be configured in the app.

@@ -2448,6 +2448,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "Service started with intent action: ${intent?.action}")
 
+        if (intent?.action == me.kavishdevar.librepods.presentation.widgets.ReconnectWidget.ACTION_RECONNECT) {
+            reconnectFromSavedMac()
+        }
         if (intent?.action == "me.kavishdevar.librepods.RECONNECT_AFTER_REVERSE") {
             Log.d(TAG, "reconnect after reversed received, taking over")
             disconnectedBecauseReversed = false
@@ -3125,6 +3128,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     @SuppressLint("MissingPermission")
     override fun onDestroy() {
+        manualReconnectJob?.cancel()
         if (::experiments.isInitialized) experiments.close()
         clearPacketLogs()
         Log.d(TAG, "Service stopped is being destroyed for some reason!")
@@ -3199,20 +3203,41 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         gestureDetector?.stopDetection()
     }
 
+    private var manualReconnectJob: kotlinx.coroutines.Job? = null
+
     @SuppressLint("MissingPermission")
+    @Synchronized
     fun reconnectFromSavedMac() {
-        val bluetoothAdapter = getSystemService(BluetoothManager::class.java).adapter
-        device = bluetoothAdapter.bondedDevices.find {
-            it.address == macAddress
+        if (manualReconnectJob?.isActive == true) return
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            sendToast(getString(R.string.reconnect_widget_setup))
+            return
         }
-        if (device != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                Log.d(TAG, "connecting to $macAddress")
-                connectToSocket(bluetoothAdapter, device!!, manual = true)
-                connectAudio(this@AirPodsService, device!!)
+        val bluetoothAdapter = getSystemService(BluetoothManager::class.java).adapter
+        if (bluetoothAdapter?.isEnabled != true) {
+            sendToast(getString(R.string.reconnect_widget_bluetooth_off))
+            return
+        }
+        val savedAddress = sharedPreferences.getString("mac_address", "")
+        val savedDevice = bluetoothAdapter.bondedDevices.find { it.address == savedAddress }
+        if (savedDevice == null) {
+            sendToast(getString(R.string.reconnect_widget_unpaired))
+            return
+        }
+        device = savedDevice
+        sendToast(getString(R.string.reconnect_widget_connecting))
+        manualReconnectJob = CoroutineScope(Dispatchers.IO).launch {
+            try {
+                connectToSocket(bluetoothAdapter, savedDevice, manual = true)
+                connectAudio(this@AirPodsService, savedDevice)
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                Log.w(TAG, "Manual reconnect failed", error)
+                sendToast(getString(R.string.reconnect_widget_open_app))
             }
         }
     }
+
 }
 
 private fun Int.dpToPx(): Int {
