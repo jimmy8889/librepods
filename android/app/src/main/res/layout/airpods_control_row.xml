@@ -40,14 +40,19 @@
             android:layout_marginTop="3dp" android:text="@string/row_auto" android:textSize="9sp" android:textColor="#FFFFFF"
             android:maxLines="1" android:importantForAccessibility="no"/>
     </LinearLayout>
-    <LinearLayout android:id="@+id/row_off" android:layout_width="0dp" android:layout_weight="1"
+    <LinearLayout android:id="@+id/row_heart" android:layout_width="0dp" android:layout_weight="1"
         android:layout_height="52dp" android:layout_marginEnd="3dp" android:orientation="vertical"
-        android:gravity="center" android:background="@drawable/airpods_row_button" android:contentDescription="@string/qs_airpods_off">
-        <ImageView android:id="@+id/row_off_icon" android:layout_width="23dp" android:layout_height="23dp"
-            android:src="@drawable/airpods_row_off" android:importantForAccessibility="no"/>
-        <TextView android:id="@+id/row_off_text" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="3dp" android:text="@string/qs_airpods_off" android:textSize="9sp" android:textColor="#FFFFFF"
-            android:maxLines="1" android:importantForAccessibility="no"/>
+        android:gravity="center" android:background="@drawable/airpods_row_button">
+        <TextView android:id="@+id/row_heart_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="—" android:textSize="14sp" android:textStyle="bold" android:textColor="#FF8FA3"
+            android:includeFontPadding="false" android:importantForAccessibility="no"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="BPM" android:textSize="8sp" android:textColor="#FF8FA3"
+            android:includeFontPadding="false" android:importantForAccessibility="no"/>
+        <TextView android:id="@+id/row_heart_time" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="8sp" android:textColor="#E5E5EA" android:includeFontPadding="false" android:importantForAccessibility="no"/>
+        <TextView android:id="@+id/row_heart_date" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="7sp" android:textColor="#AEAEB2" android:includeFontPadding="false" android:importantForAccessibility="no"/>
     </LinearLayout>
     <LinearLayout android:id="@+id/row_reconnect" android:layout_width="44dp" android:layout_height="52dp"
         android:orientation="vertical" android:gravity="center" android:background="@drawable/airpods_row_button"

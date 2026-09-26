@@ -1,6 +1,8 @@
 package me.kavishdevar.librepods.workouts
 
 import android.content.ContentValues
+import android.content.Intent
+import me.kavishdevar.librepods.presentation.widgets.AirPodsControlRow
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -14,16 +16,21 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /** Serialized writes persist each accepted sample. The database is excluded from device backups. */
-class WorkoutStore private constructor(context: Context) {
+class WorkoutStore private constructor(private val context: Context) {
     private val worker = Executors.newSingleThreadExecutor()
     private val helper = object : SQLiteOpenHelper(context.applicationContext,
-        File(context.noBackupFilesDir, "airpods-workouts.db").absolutePath, null, 1) {
+        File(context.noBackupFilesDir, "airpods-workouts.db").absolutePath, null, 2) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE workouts (id TEXT PRIMARY KEY, type TEXT NOT NULL, start INTEGER NOT NULL, end INTEGER, exported INTEGER NOT NULL DEFAULT 0, outcome TEXT NOT NULL DEFAULT '')")
             db.execSQL("CREATE TABLE samples (workout TEXT NOT NULL, time INTEGER NOT NULL, bpm INTEGER NOT NULL, PRIMARY KEY(workout,time))")
+            db.execSQL("CREATE INDEX samples_time ON samples(time DESC)")
         }
-        override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) = Unit
+        override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {
+            if (old < 2) db.execSQL("CREATE INDEX IF NOT EXISTS samples_time ON samples(time DESC)")
+        }
     }
+    private val mutableLatest = MutableStateFlow<WorkoutPoint?>(null)
+    val latestSample = mutableLatest.asStateFlow()
     private val mutableHistory = MutableStateFlow<List<WorkoutSummary>>(emptyList())
     val history = mutableHistory.asStateFlow()
     private val mutableError = MutableStateFlow<String?>(null)
@@ -60,6 +67,15 @@ class WorkoutStore private constructor(context: Context) {
                 if(c.isNull(5)) null else c.getDouble(5).toInt(),if(c.isNull(6)) null else c.getInt(6),if(c.isNull(7)) null else c.getInt(7),c.getInt(8)!=0,c.getString(9))
         }
         mutableHistory.value = list
+        val latest = helper.readableDatabase.rawQuery("SELECT time,bpm FROM samples ORDER BY time DESC LIMIT 1", null).use { c ->
+            if (c.moveToFirst()) WorkoutPoint(c.getLong(0), c.getInt(1)) else null
+        }
+        if (mutableLatest.value != latest) {
+            mutableLatest.value = latest
+            // UI failures must never prevent recording. No extra sensor reads or polling.
+            runCatching { AirPodsControlRow.update(context) }
+            runCatching { context.sendBroadcast(Intent(ACTION_LATEST_CHANGED).setPackage(context.packageName)) }
+        }
     }
     suspend fun load(id: String): SavedWorkout = execute {
         refresh()
@@ -88,6 +104,7 @@ class WorkoutStore private constructor(context: Context) {
         }
     }
     companion object {
+        const val ACTION_LATEST_CHANGED = "me.kavishdevar.librepods.LATEST_HEART_RATE_CHANGED"
         @Volatile private var instance: WorkoutStore? = null
         fun get(context: Context): WorkoutStore = instance ?: synchronized(this) {
             instance ?: WorkoutStore(context.applicationContext).also { instance = it }

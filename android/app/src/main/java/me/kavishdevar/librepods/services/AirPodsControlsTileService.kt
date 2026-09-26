@@ -18,6 +18,11 @@
 
 package me.kavishdevar.librepods.services
 
+import android.app.PendingIntent
+import android.os.Build
+import me.kavishdevar.librepods.workouts.WorkoutStore
+import me.kavishdevar.librepods.workouts.WorkoutsActivity
+import me.kavishdevar.librepods.presentation.widgets.HeartRateDisplay
 import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -67,6 +72,7 @@ abstract class AirPodsStatusTile : TileService() {
         disconnectedNotice = false
         if (!listening) {
             ContextCompat.registerReceiver(this, receiver, IntentFilter().apply {
+                addAction(WorkoutStore.ACTION_LATEST_CHANGED)
                 addAction(AirPodsNotifications.ANC_DATA)
                 addAction(AirPodsNotifications.BATTERY_DATA)
                 addAction(AirPodsNotifications.AIRPODS_CONNECTED)
@@ -137,13 +143,27 @@ class AirPodsControlsTileService : AirPodsStatusTile() {
         row.findViewById<android.widget.TextView>(R.id.row_battery_case).text =
             if (connected) getString(R.string.row_battery_case, quickSettingsBatteryValue(batteries, BatteryComponent.CASE))
             else getString(R.string.qs_airpods_disconnected)
+        val heart = HeartRateDisplay.from(WorkoutStore.get(this).latestSample.value)
+        row.findViewById<android.widget.TextView>(R.id.row_heart_value).text = heart.value
+        row.findViewById<android.widget.TextView>(R.id.row_heart_time).text = heart.time
+        row.findViewById<android.widget.TextView>(R.id.row_heart_date).text = heart.date
+        row.findViewById<android.view.View>(R.id.row_heart).apply {
+            contentDescription = heart.description
+            setOnClickListener {
+                val intent = Intent(this@AirPodsControlsTileService, WorkoutsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(
+                    this@AirPodsControlsTileService, 21, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+                else { @Suppress("DEPRECATION") startActivityAndCollapse(intent) }
+                picker?.dismiss()
+            }
+        }
         val capabilities = service?.airpodsInstance?.model?.capabilities
         val modes = availableQuickSettingsModes(capabilities == null || Capability.ADAPTIVE_AUDIO in capabilities,
             preferences.getBoolean("off_listening_mode", true))
-        val ids = listOf(R.id.row_transparency, R.id.row_cancellation, R.id.row_adaptive, R.id.row_off)
-        val icons = listOf(R.id.row_transparency_icon, R.id.row_cancellation_icon, R.id.row_adaptive_icon, R.id.row_off_icon)
-        val labels = listOf(R.id.row_transparency_text, R.id.row_cancellation_text, R.id.row_adaptive_text, R.id.row_off_text)
-        listOf(3, 2, 4, 1).forEachIndexed { index, mode ->
+        val ids = listOf(R.id.row_transparency, R.id.row_cancellation, R.id.row_adaptive)
+        val icons = listOf(R.id.row_transparency_icon, R.id.row_cancellation_icon, R.id.row_adaptive_icon)
+        val labels = listOf(R.id.row_transparency_text, R.id.row_cancellation_text, R.id.row_adaptive_text)
+        listOf(3, 2, 4).forEachIndexed { index, mode ->
             val button = row.findViewById<android.view.View>(ids[index])
             button.visibility = if (mode in modes) android.view.View.VISIBLE else android.view.View.GONE
             button.isEnabled = connected && capabilities?.contains(Capability.LISTENING_MODE) == true

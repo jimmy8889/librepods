@@ -303,3 +303,27 @@ Validation covers motion entry/exit, isolated/duplicate steps, inactivity gaps,
 monotonic session timestamps, stable export IDs, gaps, sample bounds and automatic
 readings not producing exercise sessions. Actual background behavior, permissions
 and Samsung Health ingestion still require testing on the owner's phone.
+
+### Latest recorded heart rate in the control row
+
+Replaces the Off shortcut in the 4×1 home widget and its shared Quick Settings
+popup with the latest persisted BPM, 24-hour recording time and date (day/month).
+Tap the reading to open workouts. Empty history shows a dash, never a guessed BPM.
+Readings remain visible when disconnected and are restored asynchronously after
+process restart. Deleting the newest recording falls back to the preceding saved
+sample; deleting all history clears the display. SQLite v2 adds a timestamp index
+without removing data. Updates follow successful saved-sample changes, without
+additional sensor sampling, scanning or periodic widget wake-ups.
+
+Validation: assembleFossDebug and all 39 unit tests passed; APK signature verified.
+SQLite checks cover migration, latest selection, deletion fallback and empty data.
+Physical Lawnchair rendering and device behavior still need owner testing.
+
+High-quality AAC-ELD reception remains the existing in-app recording experiment.
+It is not exposed as a system microphone for cellular calls or other apps.
+Android communication-device selection chooses existing system audio devices;
+changing that route is not equivalent to injecting decoded microphone PCM.
+A separate voice client could consume this stream with OpenAI's audio API, but
+that would be a new integration, not an upgrade to the official ChatGPT app.
+https://developer.android.com/reference/android/media/AudioManager
+https://developers.openai.com/api/docs/guides/realtime-websocket

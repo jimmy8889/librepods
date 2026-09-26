@@ -2,6 +2,9 @@
 
 package me.kavishdevar.librepods.presentation.widgets
 
+import me.kavishdevar.librepods.workouts.WorkoutStore
+import me.kavishdevar.librepods.workouts.WorkoutPoint
+import me.kavishdevar.librepods.workouts.WorkoutsActivity
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -25,7 +28,7 @@ import me.kavishdevar.librepods.services.quickSettingsBatteryValue
 object AirPodsControlRow {
     const val ACTION_MODE = "me.kavishdevar.librepods.WIDGET_LISTENING_MODE"
     private data class State(val connected: Boolean, val left: String, val right: String,
-        val case: String, val mode: Int, val modes: List<Int>, val supported: Boolean)
+        val case: String, val mode: Int, val modes: List<Int>, val supported: Boolean, val heartRate: WorkoutPoint?)
     private var lastState: State? = null
     private var lastIds = emptyList<Int>()
 
@@ -46,7 +49,7 @@ object AirPodsControlRow {
             quickSettingsBatteryValue(batteries, BatteryComponent.RIGHT),
             quickSettingsBatteryValue(batteries, BatteryComponent.CASE),
             if (connected) service!!.getANC() else 0, modes,
-            capabilities?.contains(Capability.LISTENING_MODE) == true)
+            capabilities?.contains(Capability.LISTENING_MODE) == true, WorkoutStore.get(context).latestSample.value)
         if (!force && lastState == state && lastIds == ids.toList()) return
         val views = RemoteViews(context.packageName, R.layout.airpods_control_row)
         views.setTextViewText(R.id.row_battery_buds, context.getString(R.string.row_battery_buds, state.left, state.right))
@@ -55,13 +58,19 @@ object AirPodsControlRow {
         views.setContentDescription(R.id.row_battery_group, context.getString(R.string.row_battery_accessibility, state.left, state.right, state.case))
         views.setOnClickPendingIntent(R.id.row_battery_group, PendingIntent.getActivity(context, 20,
             Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+        val heart = HeartRateDisplay.from(state.heartRate)
+        views.setTextViewText(R.id.row_heart_value, heart.value)
+        views.setTextViewText(R.id.row_heart_time, heart.time)
+        views.setTextViewText(R.id.row_heart_date, heart.date)
+        views.setContentDescription(R.id.row_heart, heart.description)
+        views.setOnClickPendingIntent(R.id.row_heart, PendingIntent.getActivity(context, 21,
+            Intent(context, WorkoutsActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
         val buttons = listOf(
             Triple(3, R.id.row_transparency, R.string.qs_airpods_transparency),
             Triple(2, R.id.row_cancellation, R.string.qs_airpods_cancellation),
-            Triple(4, R.id.row_adaptive, R.string.qs_airpods_adaptive),
-            Triple(1, R.id.row_off, R.string.qs_airpods_off))
-        val imageIds = listOf(R.id.row_transparency_icon, R.id.row_cancellation_icon, R.id.row_adaptive_icon, R.id.row_off_icon)
-        val labelIds = listOf(R.id.row_transparency_text, R.id.row_cancellation_text, R.id.row_adaptive_text, R.id.row_off_text)
+            Triple(4, R.id.row_adaptive, R.string.qs_airpods_adaptive))
+        val imageIds = listOf(R.id.row_transparency_icon, R.id.row_cancellation_icon, R.id.row_adaptive_icon)
+        val labelIds = listOf(R.id.row_transparency_text, R.id.row_cancellation_text, R.id.row_adaptive_text)
         buttons.forEachIndexed { index, (mode, id, label) ->
             val selected = connected && state.mode == mode
             val enabled = connected && state.supported
