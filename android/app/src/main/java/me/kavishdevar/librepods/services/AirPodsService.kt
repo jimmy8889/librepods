@@ -1745,14 +1745,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         val disconnectedNotificationChannel = NotificationChannel(
             "background_service_status",
             "Background Service Status",
-            NotificationManager.IMPORTANCE_NONE
-        )
-
-        val connectedNotificationChannel = NotificationChannel(
-            "airpods_connection_status",
-            "AirPods Connection Status",
-            NotificationManager.IMPORTANCE_LOW,
-        )
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            setShowBadge(false)
+            setSound(null, null)
+            enableVibration(false)
+        }
 
         val socketFailureChannel = NotificationChannel(
             "socket_connection_failure",
@@ -1767,15 +1765,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.createNotificationChannel(disconnectedNotificationChannel)
-        notificationManager.createNotificationChannel(connectedNotificationChannel)
+        // Clear the old separate battery card when upgrading this fork.
+        notificationManager.cancel(2)
         notificationManager.createNotificationChannel(socketFailureChannel)
 
-        val notificationSettingsIntent =
-            Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                putExtra(Settings.EXTRA_CHANNEL_ID, "background_service_status")
-            }
-        val pendingIntentNotifDisable = PendingIntent.getActivity(
+        val notificationSettingsIntent = Intent(this, MainActivity::class.java)
+        val pendingIntentService = PendingIntent.getActivity(
             this,
             0,
             notificationSettingsIntent,
@@ -1783,9 +1778,10 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         )
 
         val notification = NotificationCompat.Builder(this, "background_service_status")
-            .setSmallIcon(R.drawable.airpods).setContentTitle("Background Service Running")
-            .setContentText("Useless notification, disable it by clicking on it.")
-            .setContentIntent(pendingIntentNotifDisable).setCategory(Notification.CATEGORY_SERVICE)
+            .setSmallIcon(R.drawable.airpods).setContentTitle(getString(R.string.airpods_background_title))
+            .setContentText(getString(R.string.airpods_background_text))
+            .setSilent(true).setOnlyAlertOnce(true).setShowWhen(false)
+            .setContentIntent(pendingIntentService).setCategory(Notification.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).build()
 
         try {
@@ -2044,73 +2040,12 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
+    @Suppress("UNUSED_PARAMETER")
     fun updateNotificationContent(
         connected: Boolean, airpodsName: String? = null, batteryList: List<Battery>? = null
     ) {
-        val notificationManager = getSystemService(NotificationManager::class.java)
-
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            notificationIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        if (BluetoothConnectionManager.aacpSocket == null) {
-            return
-        }
-        if (BluetoothConnectionManager.aacpSocket?.isConnected == true) {
-            val updatedNotificationBuilder =
-                NotificationCompat.Builder(this, "airpods_connection_status")
-                    .setSmallIcon(R.drawable.airpods)
-                    .setContentTitle(airpodsName ?: config.deviceName).setContentText(
-                        """${
-                        batteryList?.find { it.component == BatteryComponent.LEFT }?.let {
-                            if (it.status != BatteryStatus.DISCONNECTED) {
-                                "L: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                            } else {
-                                ""
-                            }
-                        } ?: ""
-                    } ${
-                        batteryList?.find { it.component == BatteryComponent.RIGHT }?.let {
-                            if (it.status != BatteryStatus.DISCONNECTED) {
-                                "R: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                            } else {
-                                ""
-                            }
-                        } ?: ""
-                    } ${
-                        batteryList?.find { it.component == BatteryComponent.CASE }?.let {
-                            if (it.status != BatteryStatus.DISCONNECTED) {
-                                "Case: ${if (it.status == BatteryStatus.CHARGING) "⚡" else ""} ${it.level}%"
-                            } else {
-                                ""
-                            }
-                        } ?: ""
-                    }""").setContentIntent(pendingIntent).setCategory(Notification.CATEGORY_STATUS)
-                    .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true)
-
-            if (disconnectedBecauseReversed) {
-                updatedNotificationBuilder.addAction(
-                    R.drawable.ic_bluetooth, "Reconnect", PendingIntent.getService(
-                        this, 0, Intent(this, AirPodsService::class.java).apply {
-                            action = "me.kavishdevar.librepods.RECONNECT_AFTER_REVERSE"
-                        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                )
-            }
-
-            val updatedNotification = updatedNotificationBuilder.build()
-
-            notificationManager.notify(2, updatedNotification)
-            notificationManager.cancel(1)
-        } else if (!connected) {
-            notificationManager.cancel(2)
-        } else if (!config.bleOnlyMode && BluetoothConnectionManager.aacpSocket?.isConnected != true) {
-            showSocketConnectionFailureNotification("BluetoothConnectionManager.aacpSocket? created, but not connected. Check logs")
-        }
+        // Battery and mode information live in Quick Settings and widgets. Keep only the
+        // mandatory foreground-service notice, created once in startForegroundNotification().
     }
 
     fun handleIncomingCall() {

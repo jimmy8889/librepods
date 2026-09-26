@@ -34,6 +34,7 @@ import me.kavishdevar.librepods.bluetooth.AACPManager
 import me.kavishdevar.librepods.bluetooth.BluetoothConnectionManager
 import me.kavishdevar.librepods.data.AirPodsNotifications
 import me.kavishdevar.librepods.data.Capability
+import me.kavishdevar.librepods.data.BatteryComponent
 import me.kavishdevar.librepods.presentation.widgets.ReconnectWidget
 
 /** Observe status only while Quick Settings is visible; no timer or Bluetooth scan. */
@@ -41,6 +42,15 @@ abstract class AirPodsStatusTile : TileService() {
     private var disconnectedNotice = false
     protected val connected get() = !disconnectedNotice && BluetoothConnectionManager.aacpSocket?.isConnected == true
     protected val preferences get() = getSharedPreferences("settings", MODE_PRIVATE)
+    protected val batteryText: String
+        get() {
+            if (!connected) return getString(R.string.qs_airpods_disconnected)
+            val batteries = ServiceManager.getService()?.getBattery() ?: emptyList()
+            return getString(R.string.qs_airpods_battery_summary,
+                quickSettingsBatteryValue(batteries, BatteryComponent.LEFT),
+                quickSettingsBatteryValue(batteries, BatteryComponent.RIGHT),
+                quickSettingsBatteryValue(batteries, BatteryComponent.CASE))
+        }
     private var listening = false
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -60,6 +70,7 @@ abstract class AirPodsStatusTile : TileService() {
         if (!listening) {
             ContextCompat.registerReceiver(this, receiver, IntentFilter().apply {
                 addAction(AirPodsNotifications.ANC_DATA)
+                addAction(AirPodsNotifications.BATTERY_DATA)
                 addAction(AirPodsNotifications.AIRPODS_CONNECTED)
                 addAction(AirPodsNotifications.AIRPODS_DISCONNECTED)
             }, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -85,9 +96,9 @@ class AirPodsQSService : AirPodsStatusTile() {
         val tile = qsTile ?: return
         tile.label = getString(R.string.qs_airpods_modes)
         tile.state = if (connected) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.subtitle = if (connected) modeName(ServiceManager.getService()?.getANC() ?: 0)
-            else getString(R.string.qs_airpods_disconnected)
-        tile.contentDescription = "${tile.label}, ${tile.subtitle}"
+        tile.subtitle = batteryText
+        tile.contentDescription = "${tile.label}, ${modeName(ServiceManager.getService()?.getANC() ?: 0)}, ${tile.subtitle}"
+        if (picker?.isShowing == true) picker?.setTitle(pickerTitle())
         tile.icon = Icon.createWithResource(this, R.drawable.airpods)
         tile.updateTile()
     }
@@ -99,7 +110,7 @@ class AirPodsQSService : AirPodsStatusTile() {
         picker?.dismiss()
         val service = ServiceManager.getService()
         val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.qs_airpods_modes)
+            .setTitle(pickerTitle())
             .setNegativeButton(android.R.string.cancel, null)
             .setNeutralButton(R.string.reconnect_widget_label) { _, _ ->
                 ReconnectWidget.requestReconnect(this)
@@ -126,6 +137,7 @@ class AirPodsQSService : AirPodsStatusTile() {
         }
         picker = builder.create().also { showDialog(it) }
     }
+    private fun pickerTitle() = "${getString(R.string.qs_airpods_modes)}\n$batteryText"
     private fun modeName(mode: Int): String = getString(when (mode) {
         1 -> R.string.qs_airpods_off
         2 -> R.string.qs_airpods_cancellation
@@ -140,7 +152,7 @@ class AirPodsReconnectQSService : AirPodsStatusTile() {
     override fun renderTile() {
         qsTile?.apply {
             label = getString(R.string.reconnect_widget_name)
-            subtitle = getString(if (connected) R.string.qs_airpods_connected else R.string.qs_airpods_disconnected)
+            subtitle = batteryText
             state = if (connected) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             icon = Icon.createWithResource(this@AirPodsReconnectQSService, R.drawable.reconnect_widget_icon)
             contentDescription = "$label, $subtitle"

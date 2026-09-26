@@ -43,9 +43,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
 import me.kavishdevar.librepods.presentation.MaterialIcons
 import me.kavishdevar.librepods.presentation.components.ListItemOrientation
 import me.kavishdevar.librepods.presentation.components.StyledList
@@ -81,14 +79,6 @@ fun PermissionsPage(
     }
 
 
-    val notificationPermissionState = rememberPermissionState("android.permission.POST_NOTIFICATIONS") {
-        if (grantingAll) {
-            if (!phonePermissionState.allPermissionsGranted) phonePermissionState.launchMultiplePermissionRequest()
-            else if (!canDrawOverlays.value) canDrawOverlays.value = Settings.canDrawOverlays(context)
-        }
-    }
-
-
     val bluetoothPermissionsState = rememberMultiplePermissionsState(
         listOf(
             "android.permission.BLUETOOTH_CONNECT",
@@ -99,8 +89,7 @@ fun PermissionsPage(
         )
     ) {
         if (grantingAll) {
-            if (!notificationPermissionState.status.isGranted) notificationPermissionState.launchPermissionRequest()
-            else if (!phonePermissionState.allPermissionsGranted) phonePermissionState.launchMultiplePermissionRequest()
+            if (!phonePermissionState.allPermissionsGranted) phonePermissionState.launchMultiplePermissionRequest()
             else if (!canDrawOverlays.value) canDrawOverlays.value = Settings.canDrawOverlays(context)
         }
     }
@@ -174,47 +163,11 @@ fun PermissionsPage(
                 )
             }
             StyledList(title = "Optional Permissions") {
-                val animatedNotificationsIconColor by animateColorAsState(
-                    if (notificationPermissionState.status.isGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                )
-                val animatedNotificationsContainerColor by animateColorAsState(
-                    if (notificationPermissionState.status.isGranted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest
-                )
                 val animatedPhoneIconColor by animateColorAsState(if (phonePermissionState.allPermissionsGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                 val animatedPhoneContainerColor by animateColorAsState(
                     if (phonePermissionState.allPermissionsGranted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest
                 )
 
-                StyledListItem(
-                    name = "Notifications",
-                    onClick = if (!notificationPermissionState.status.isGranted) {
-                        {
-                            grantingAll = false
-                            notificationPermissionState.launchPermissionRequest()
-                        }
-                    } else null,
-                    description = "Show battery status",
-                    orientation = ListItemOrientation.Vertical,
-                    leadingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    animatedNotificationsContainerColor,
-                                    MaterialShapes.SoftBurst.normalized()
-                                        .toShape()
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = MaterialIcons.notifications,
-                                contentDescription = "notifications",
-                                modifier = Modifier.size(24.dp),
-                                tint = animatedNotificationsIconColor
-                            )
-                        }
-                    },
-                )
                 StyledListItem(
                     name = "Phone",
                     onClick = if (!phonePermissionState.allPermissionsGranted) {
@@ -308,7 +261,6 @@ fun PermissionsPage(
                     onClick = {
                         grantingAll = true
                         if (!bluetoothPermissionsState.allPermissionsGranted) bluetoothPermissionsState.launchMultiplePermissionRequest()
-                        else if (!notificationPermissionState.status.isGranted) notificationPermissionState.launchPermissionRequest()
                         else if (!phonePermissionState.allPermissionsGranted) phonePermissionState.launchMultiplePermissionRequest()
                         else if (!canDrawOverlays.value) canDrawOverlays.value =
                             Settings.canDrawOverlays(context)
@@ -316,7 +268,7 @@ fun PermissionsPage(
                     modifier = Modifier
                         .height(IconButtonDefaults.mediumContainerSize(IconButtonDefaults.IconButtonWidthOption.Narrow).height)
                         .weight(1f),
-                    enabled = !bluetoothPermissionsState.allPermissionsGranted || !notificationPermissionState.status.isGranted || !phonePermissionState.allPermissionsGranted || !canDrawOverlays.value
+                    enabled = !bluetoothPermissionsState.allPermissionsGranted || !phonePermissionState.allPermissionsGranted || !canDrawOverlays.value
                 ) {
                     Text(
                         text = "Grant all",

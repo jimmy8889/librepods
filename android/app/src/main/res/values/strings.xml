@@ -310,4 +310,7 @@
     <string name="qs_airpods_connect_first">Reconnect your AirPods to change listening mode.</string>
     <string name="qs_airpods_unsupported">These AirPods do not support noise control.</string>
     <string name="qs_airpods_failed">Could not change mode. Reconnect your AirPods and try again.</string>
+    <string name="qs_airpods_battery_summary">L %1$s · R %2$s · C %3$s</string>
+    <string name="airpods_background_title">LibrePods connection service</string>
+    <string name="airpods_background_text">AirPods controls are available in Quick Settings.</string>
 </resources>

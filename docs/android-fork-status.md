@@ -160,3 +160,21 @@ remain tappable so reconnection is available. No physical phone is attached for
 this build; Samsung panel presentation and actual tile taps still need device
 validation. Build, signature checks and 20 unit tests pass, including supported
 mode filtering and AACP mode values.
+
+## Battery in Quick Settings; no drawer notifications (2026-09-26)
+
+Both tiles show L/R/C battery percentages and charging indicators when connected.
+The mode picker repeats the full summary in its title in case Samsung truncates
+the tile subtitle. Missing, disconnected or invalid readings show a dash; a
+real zero remains 0%. Updates use existing battery broadcasts, without polling.
+
+The separate battery notification is removed and cleared on service startup.
+This fork no longer declares or requests POST_NOTIFICATIONS. On Android 13+
+(the app requires Android 13), Android suppresses ordinary notifications and
+foreground-service notices from the notification drawer without this permission.
+The service still supplies its mandatory silent notification to Android and
+remains visible in the system Active apps/Task Manager list. Existing user
+notification preferences are not changed with hidden APIs. On-device behavior
+after upgrade remains to be checked; build, signature and 22 unit tests pass.
+
+Reference: https://developer.android.com/develop/ui/compose/notifications/notification-permission
