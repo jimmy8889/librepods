@@ -193,6 +193,27 @@ fun AppSettingsScreen(
             enabled = state.isPremium
         )
 
+        StyledList(title = "Quick Settings") {
+            StyledListItem(
+                name = "Add AirPods controls to Quick Settings",
+                onClick = {
+                    context.getSystemService(android.app.StatusBarManager::class.java).requestAddTileService(
+                        android.content.ComponentName(context, me.kavishdevar.librepods.services.AirPodsControlsTileService::class.java),
+                        context.getString(R.string.row_name),
+                        android.graphics.drawable.Icon.createWithResource(context, R.drawable.airpods),
+                        context.mainExecutor
+                    ) { result ->
+                        val message = when (result) {
+                            android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED -> "AirPods controls added to Quick Settings"
+                            android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED -> "AirPods controls is already in Quick Settings"
+                            else -> "Open Quick Settings, tap Edit, and add AirPods controls"
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            )
+        }
+
         StyledList(title = "AirPods experiments") {
             StyledListItem(
                 name = "Heart rate and high-quality microphone",

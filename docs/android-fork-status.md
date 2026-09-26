@@ -203,3 +203,12 @@ Settings tiles, plus their unused activity and service/widget implementations.
 Only the combined AirPods controls row remains in the widget picker. Its existing
 ReconnectWidget component is retained so the previous combined row updates in
 place. Old separate widgets may leave launcher placeholders to remove.
+
+## Combined Quick Settings control (2026-09-26)
+
+Corrected the control location: one AirPods controls Quick Settings tile now
+opens the combined battery/modes/reconnect row. The home-screen row remains
+available; the old separate tiles and widgets remain removed. App Settings
+includes an Add AirPods controls to Quick Settings action using Android's tile
+placement prompt. Status listeners run only while the tile is visible, with
+no periodic polling or extra Bluetooth scans. Phone validation remains pending.
