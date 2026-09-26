@@ -28,26 +28,30 @@ class ReconnectWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action != ACTION_RECONNECT) return
-        val message = when {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED -> R.string.reconnect_widget_setup
-            context.getSharedPreferences("settings", Context.MODE_PRIVATE).getString("mac_address", "").isNullOrBlank() -> R.string.reconnect_widget_setup
-            context.getSystemService(BluetoothManager::class.java).adapter?.isEnabled != true -> R.string.reconnect_widget_bluetooth_off
-            else -> null
-        }
-        if (message != null) {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            ContextCompat.startForegroundService(context,
-                Intent(context, AirPodsService::class.java).setAction(ACTION_RECONNECT))
-        } catch (_: RuntimeException) {
-            Toast.makeText(context, R.string.reconnect_widget_open_app, Toast.LENGTH_SHORT).show()
-        }
+        requestReconnect(context)
     }
 
     companion object {
         const val ACTION_RECONNECT = "me.kavishdevar.librepods.WIDGET_RECONNECT"
+
+        fun requestReconnect(context: Context) {
+            val message = when {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED -> R.string.reconnect_widget_setup
+                context.getSharedPreferences("settings", Context.MODE_PRIVATE).getString("mac_address", "").isNullOrBlank() -> R.string.reconnect_widget_setup
+                context.getSystemService(BluetoothManager::class.java).adapter?.isEnabled != true -> R.string.reconnect_widget_bluetooth_off
+                else -> null
+            }
+            if (message != null) {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                return
+            }
+            try {
+                ContextCompat.startForegroundService(context,
+                    Intent(context, AirPodsService::class.java).setAction(ACTION_RECONNECT))
+            } catch (_: RuntimeException) {
+                Toast.makeText(context, R.string.reconnect_widget_open_app, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

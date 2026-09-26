@@ -128,11 +128,17 @@
             android:name=".services.AirPodsQSService"
             android:exported="true"
             android:icon="@drawable/airpods"
-            android:label="ANC Mode"
+            android:label="@string/qs_airpods_modes"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
+        </service>
+        <service android:name=".services.AirPodsReconnectQSService"
+            android:exported="true" android:icon="@drawable/reconnect_widget_icon"
+            android:label="@string/reconnect_widget_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
 <!--        <service-->
 <!--            android:name=".services.AppListenerService"-->

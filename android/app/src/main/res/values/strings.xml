@@ -299,4 +299,15 @@
     <string name="reconnect_widget_open_app">Open LibrePods to reconnect your AirPods.</string>
     <string name="reconnect_widget_unpaired">Pair your saved AirPods in Bluetooth settings first.</string>
     <string name="reconnect_widget_connecting">Reconnecting to AirPods…</string>
+    <string name="qs_airpods_modes">AirPods modes</string>
+    <string name="qs_airpods_transparency">Transparency</string>
+    <string name="qs_airpods_cancellation">Noise cancellation</string>
+    <string name="qs_airpods_adaptive">Adaptive</string>
+    <string name="qs_airpods_off">Off</string>
+    <string name="qs_airpods_unknown">Mode unavailable</string>
+    <string name="qs_airpods_connected">Connected</string>
+    <string name="qs_airpods_disconnected">Disconnected</string>
+    <string name="qs_airpods_connect_first">Reconnect your AirPods to change listening mode.</string>
+    <string name="qs_airpods_unsupported">These AirPods do not support noise control.</string>
+    <string name="qs_airpods_failed">Could not change mode. Reconnect your AirPods and try again.</string>
 </resources>

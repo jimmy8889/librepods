@@ -143,3 +143,20 @@ Bluetooth permissions, saved setup and Bluetooth power before starting. Repeated
 taps during a manual connection attempt are ignored. It adds no periodic
 updates, scanning or polling. Nearby-device permissions and initial pairing
 must already be configured in the app.
+
+## Quick Settings controls (2026-09-26)
+
+In the phone's Quick Settings editor, add **AirPods modes** and **Reconnect
+AirPods**. The existing ANC Mode tile keeps its component identity but now opens
+a selection dialog rather than cycling blindly. Pick Transparency or Noise
+cancellation, plus Adaptive on supported devices and Off when enabled in app
+settings. The dialog also offers Reconnect. The separate reconnect tile invokes
+the same guarded connection path as the home-screen widget and starts the
+foreground service when necessary. Locked-phone actions request unlock first.
+
+Tile status observes app-private connection and mode broadcasts only while Quick
+Settings is listening. There are no timers or additional scans. Disconnected tiles
+remain tappable so reconnection is available. No physical phone is attached for
+this build; Samsung panel presentation and actual tile taps still need device
+validation. Build, signature checks and 20 unit tests pass, including supported
+mode filtering and AACP mode values.
