@@ -127,3 +127,37 @@ training, location, medication or cycle-tracking consents for this task. Inspect
 Heart rate > View all for the known sample before changing or resending data.
 https://www.samsung.com/us/support/troubleshoot/TSG10013213/
 https://www.samsung.com/hk_en/support/mobile-devices/measure-your-ecg-with-the-galaxy-watch-series/
+
+## Revised constraint: no custom iPhone software
+
+Owner can keep the paired iPhone online but cannot install custom software on it.
+They have a Mac they can use freely. This supersedes the proposed iPhone companion
+architecture. Do not build or recommend an iPhone companion or jailbreak as the
+current route.
+
+Candidate: an independent watchOS 10-compatible app installed on the Watch only,
+using HealthKit permissions on the Watch and network transport to an authenticated
+relay/Android receiver. Apple documents watch-only apps with no paired-iPhone app
+installation. Notifications could arrive as this app's alerts through APNs; this
+requires signing/push configuration and a network-connected Watch, and is not
+native mirroring of every Android app's full capabilities. Health export scope
+is data accessible on the Watch, not a promise of the entire iPhone Health archive.
+Mac can build/sign and host a relay but cannot directly read/write the HealthKit
+store via macOS HealthKit. Merely keeping iPhone/Mac online does not implement sync.
+
+Installation feasibility remains open: Apple's Xcode device-pairing instructions
+require Developer Mode on the paired iPhone and Watch. Asked whether those settings
+changes are allowed (without app installation), and for macOS/Xcode versions.
+Current Codex host is Linux and has no xcodebuild or access to the user's Mac.
+No Watch app has been compiled, signed, installed or claimed functional.
+
+Screenshot 4005 shows Samsung Health's main Hours heart-rate chart empty and an
+'Other data from this period' section at the bottom. Check the content below this
+section before concluding Samsung imported nothing; third-party display placement
+is a hypothesis, not verified behaviour. LibrePods' sample read-back remains
+verified. No additional export-format changes or record deletion are justified.
+
+https://developer.apple.com/documentation/watchos-apps/creating-independent-watchos-apps
+https://developer.apple.com/documentation/xcode/pairing-your-devices-with-your-mac
+https://developer.apple.com/documentation/watchos-apps/enabling-and-receiving-notifications
+https://developer.apple.com/documentation/healthkit/hkhealthstore/ishealthdataavailable()
