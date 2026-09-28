@@ -14,7 +14,7 @@ adb "${adb_args[@]}" shell pm has-feature android.hardware.uwb
 printf '\nRelevant installed package versions:\n'
 for package in me.kavishdevar.librepods com.sec.android.app.shealth com.google.android.healthconnect.controller com.google.android.apps.healthdata com.android.healthconnect.controller moe.shizuku.privileged.api; do
     printf '%s\n' "$package"
-    adb "${adb_args[@]}" shell dumpsys package "$package" | awk '/versionName=|versionCode=/{print; if (++count == 2) exit}'
+    adb "${adb_args[@]}" shell dumpsys package "$package" | awk '/versionName=|versionCode=/{if (++count <= 2) print}'
 done
 printf '\nLibrePods Health Connect write permissions:\n'
 for permission in WRITE_HEART_RATE WRITE_EXERCISE; do

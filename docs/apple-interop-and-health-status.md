@@ -161,3 +161,26 @@ https://developer.apple.com/documentation/watchos-apps/creating-independent-watc
 https://developer.apple.com/documentation/xcode/pairing-your-devices-with-your-mac
 https://developer.apple.com/documentation/watchos-apps/enabling-and-receiving-notifications
 https://developer.apple.com/documentation/healthkit/hkhealthstore/ishealthdataavailable()
+
+## Confirmed constraints, 2026-09-28 follow-up
+
+The iPhone is a work device and entirely off limits: no apps, Developer Mode,
+trust/pairing changes, jailbreak or other modifications. Mac runs macOS 27 with
+Xcode available. No remote access to that Mac is configured. Xcode sideloading
+through this iPhone is not an available plan. Do not ask to relax that restriction.
+
+Independent watch-only apps can be distributed through the Watch App Store without
+an iPhone companion. This is a remaining installation candidate, subject to the
+Watch's existing account/management restrictions and availability of an approved
+app. A custom app would require the Apple Developer distribution/review process;
+local Xcode builds are not themselves installable through the App Store. No App
+Store submission or developer membership purchase is authorized/performed here.
+https://help.apple.com/xcode/mac/current/en.lproj/devaba4602fd.html
+https://support.apple.com/guide/watch/get-apps-apd99e3c6a68/watchos
+
+Owner confirms Other data from this period is also empty in Samsung Health.
+Therefore the separate-display hypothesis is not supported by observed UI.
+Record presence in Health Connect is verified; cause of Samsung import/display
+failure remains unknown. Asked for Samsung Wireless debugging endpoint to perform
+read-only device diagnosis. Do not assert that all Samsung Health 7 versions are
+broken or that unsupported record rewriting is a proven fix. Retain saved data.
