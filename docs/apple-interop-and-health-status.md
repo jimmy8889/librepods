@@ -117,3 +117,13 @@ https://developer.apple.com/documentation/healthkit/executing-observer-queries
 https://developer.apple.com/documentation/watchos-apps/taking-advantage-of-notification-forwarding
 https://developer.apple.com/documentation/watchos-apps/enabling-and-receiving-notifications
 https://support.apple.com/en-us/108300
+
+Owner reports Samsung Health 7; imported readings are not visibly apparent.
+Samsung publishes a specific 7.0 sync troubleshooting page pointing to its own
+Settings > Privacy processing consents. These are separate from Health Connect
+app permissions. Check health-and-wellness processing status with the owner;
+this is a candidate cause, not proof. Do not recommend enabling unrelated AI
+training, location, medication or cycle-tracking consents for this task. Inspect
+Heart rate > View all for the known sample before changing or resending data.
+https://www.samsung.com/us/support/troubleshoot/TSG10013213/
+https://www.samsung.com/hk_en/support/mobile-devices/measure-your-ecg-with-the-galaxy-watch-series/
