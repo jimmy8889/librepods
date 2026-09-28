@@ -86,3 +86,34 @@ https://support.apple.com/en-mide/118490
 - Desired Watch features: health data, notifications/calls, or both.
 - Samsung root status and actual UWB feature report before proposing device work.
 - Existing AirTag ownership/pairing setup before choosing an authenticated client.
+
+## Owner clarification and next architecture
+
+Owner confirms original Apple Watch SE on watchOS 10.6, wants health data and
+Android notifications, and retains its paired iPhone. Upstream WatchWitch's
+current README still lists the watchOS 10 tunnel limitation; repository HEAD
+checked was b597026a75c1990c95f4002e0c10acd0dfbe8412. Do not present it as ready
+for this Watch or suggest an update/downgrade as a solution.
+
+Preferred candidate: retain Apple pairing. A companion iPhone app can read
+user-authorized HealthKit changes and relay heart rate/workouts to Android for
+Health Connect import. Use stable source IDs, preserve Watch device provenance,
+handle corrections/deletions and prevent Apple↔Android sync loops. Background
+HealthKit delivery is scheduled by iOS and cannot be promised as instantaneous.
+
+Notification candidate: Android NotificationListenerService with explicit user
+access and app selection -> authenticated relay -> companion Apple app/APNs ->
+Watch alerts. These are bridge notifications, not native Android app pairing;
+replies/dismissal require separate implementations. Avoid forwarding sensitive
+notification content by default. A Watch away from the iPhone still needs its
+own Wi-Fi/cellular connection for remote delivery. Never promise that Android
+Bluetooth pairing alone supplies that connection. Signing, push credentials,
+networking and physical Apple-device testing are still required.
+
+Pending: iPhone model/iOS, Mac availability, and whether the iPhone can stay online.
+No relay server has been created and no notification/health data has been sent.
+
+https://developer.apple.com/documentation/healthkit/executing-observer-queries
+https://developer.apple.com/documentation/watchos-apps/taking-advantage-of-notification-forwarding
+https://developer.apple.com/documentation/watchos-apps/enabling-and-receiving-notifications
+https://support.apple.com/en-us/108300
