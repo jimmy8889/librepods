@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 @SuppressLint("InvalidFragmentVersionForActivityResult")
 class UwbExperimentActivity : ComponentActivity() {
     private lateinit var ranger: UwbRanger
+    private lateinit var bleInspector: PairedBleInspector
     private var profile: UwbSessionProfile? = null
     private var importedAt = 0L
     private var loaded by mutableStateOf(false)
@@ -56,8 +57,10 @@ class UwbExperimentActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ranger = UwbRanger.create(this)
+        bleInspector = PairedBleInspector(this)
         setContent {
             val state by ranger.state.collectAsState()
+            val inspection by bleInspector.state.collectAsState()
             val locale = LocalConfiguration.current.locales[0]
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
@@ -82,8 +85,16 @@ class UwbExperimentActivity : ComponentActivity() {
                                     clearProfile(); message = "Session expired. Import freshly negotiated parameters."
                                 } else { ranger.start(it); clearProfile() }
                             }
-                        }, enabled = state.active || (loaded && state.available)) { Text(if (state.active) "Stop UWB test" else "Start UWB test") }
+                        }, enabled = state.active || (loaded && state.available && !inspection.active)) { Text(if (state.active) "Stop UWB test" else "Start UWB test") }
                         if (message.isNotEmpty()) Text(message)
+                        HorizontalDivider()
+                        Text("Case protocol investigation", style = MaterialTheme.typography.titleLarge)
+                        Text("Service discovery only for a BLE peer resolved with your saved AirPods identity key. It may be an earbud interface; it does not authenticate the charging case. No characteristic values are read, no commands are written and no pairing changes are made. Stops after 25 seconds or when you leave.")
+                        OutlinedButton(onClick = { if (inspection.active) bleInspector.close() else bleInspector.start() }, enabled = !state.active) {
+                            Text(if (inspection.active) "Stop BLE inspection" else "Inspect paired BLE interface")
+                        }
+                        Text(inspection.status)
+                        inspection.metadata.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
                         TextButton(onClick = { finish() }) { Text("Back") }
                     }
                 }
@@ -96,6 +107,6 @@ class UwbExperimentActivity : ComponentActivity() {
     }
     private fun clearProfile() { profile?.destroy(); profile = null; loaded = false; importedAt = 0 }
     override fun onStart() { super.onStart(); ranger.observe() }
-    override fun onStop() { ranger.close(); clearProfile(); super.onStop() }
-    override fun onDestroy() { ranger.close(); super.onDestroy() }
+    override fun onStop() { ranger.close(); bleInspector.close(); clearProfile(); super.onStop() }
+    override fun onDestroy() { ranger.close(); bleInspector.close(); super.onDestroy() }
 }
