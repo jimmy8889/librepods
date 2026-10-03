@@ -40,6 +40,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache driver packages and WDK devcon
+        id: drivers
+        uses: actions/cache@v4
+        with:
+          path: |
+            windows/drivers/aap/prebuilt
+            windows/drivers/mic/prebuilt
+            windows/drivers/mic-portcls/prebuilt
+            windows/installer/tools/devcon.exe
+          key: desktop-drivers-v1-${{ hashFiles('windows/drivers/**') }}
+
       # ---- Kernel drivers (WDK) ------------------------------------------------
       # A source change under windows/drivers/* only reaches users if the shipped
       # .sys is rebuilt — e.g. the AAP channel's 1691-byte MTU that heart rate needs.
@@ -49,11 +60,13 @@ jobs:
       # "Assemble install folder" step below bundles the fresh builds.
       # windows-2022 doesn't ship winget — install it first.
       - name: Install winget
+        if: steps.drivers.outputs.cache-hit != 'true'
         uses: Cyberboss/install-winget@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Windows SDK + WDK (winget)
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           foreach ($id in 'Microsoft.WindowsSDK.10.0.26100', 'Microsoft.WindowsWDK.10.0.26100') {
@@ -64,6 +77,7 @@ jobs:
           }
 
       - name: Build drivers (KMDF, x64 Release)
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -82,6 +96,7 @@ jobs:
           if ($LASTEXITCODE) { throw "ACX mic driver build failed (exit $LASTEXITCODE)" }
 
       - name: Regenerate driver catalogs + refresh the prebuilt packages
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $inf2cat = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter Inf2Cat.exe |
@@ -118,6 +133,7 @@ jobs:
           }
 
       - name: Collect Microsoft devcon from installed WDK
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $tool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Tools" -Recurse -Filter devcon.exe |
@@ -230,4 +246,3 @@ jobs:
           name: ntpods-windows-msi
           path: NTPods.msi
           if-no-files-found: error
-
