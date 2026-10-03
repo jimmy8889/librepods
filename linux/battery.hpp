@@ -70,7 +70,7 @@ public:
     // Parse the battery status packet and detect primary/secondary pods
     bool parsePacket(const QByteArray &packet)
     {
-        if (!packet.startsWith(AirPodsPackets::Parse::BATTERY_STATUS))
+        if (packet.size() < 7 || !packet.startsWith(AirPodsPackets::Parse::BATTERY_STATUS))
         {
             return false;
         }
@@ -103,11 +103,15 @@ public:
             Component comp = static_cast<Component>(type);
             auto level = static_cast<quint8>(packet[offset + 2]);
             auto status = static_cast<BatteryStatus>(packet[offset + 3]);
-
-            if (status != BatteryStatus::Disconnected)
-            {
-                newStates[comp] = {level, status};
-            }
+            if (comp != Component::Headset && comp != Component::Left &&
+                comp != Component::Right && comp != Component::Case)
+                return false;
+            if (status != BatteryStatus::Charging && status != BatteryStatus::Discharging &&
+                status != BatteryStatus::Disconnected)
+                return false;
+            if (status != BatteryStatus::Disconnected && level > 100)
+                return false;
+            newStates[comp] = {level, status};
 
             // If this is a pod (Left or Right), add it to the list
             if (comp == Component::Left || comp == Component::Right || comp == Component::Headset)

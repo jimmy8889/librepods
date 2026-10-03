@@ -1,0 +1,13 @@
+// Merge this into ~/.config/waybar/config.jsonc and add
+// "custom/librepods" to modules-right. Keep the "tray" module too.
+{
+  "custom/librepods": {
+    "exec": "librepods-waybar",
+    "return-type": "json",
+    "restart-interval": 5,
+    "on-click": "librepods",
+    "on-click-right": "librepods-ctl noise:anc",
+    "on-click-middle": "librepods-ctl noise:transparency",
+    "tooltip": true
+  }
+}

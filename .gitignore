@@ -654,3 +654,17 @@ obj/
 
 # End of https://www.toptal.com/developers/gitignore/api/qt,c++,clion,kotlin,python,android,pycharm,androidstudio,visualstudiocode,linux
 linux/.qmlls.ini
+
+# Desktop build products and separately fetched third-party libraries
+windows/daemon/vendor/
+windows/**/obj/
+windows/**/bin/
+windows/**/prebuilt/
+windows/installer/tools/*.exe
+*.msi
+*.pdb
+*.sys
+*.cat
+packaging/omarchy/src/
+packaging/omarchy/pkg/
+*.pkg.tar.zst

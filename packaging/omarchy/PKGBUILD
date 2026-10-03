@@ -1,0 +1,46 @@
+# Build from repository root: makepkg -si -p packaging/omarchy/PKGBUILD
+pkgname=librepods-omarchy
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='LibrePods AirPods controls, tray and Waybar integration for Omarchy'
+arch=('x86_64' 'aarch64')
+url='https://github.com/jimmy8889/librepods'
+license=('GPL-3.0-only')
+depends=('qt6-base' 'qt6-declarative' 'qt6-connectivity' 'qt6-wayland' 'openssl'
+         'libpulse' 'bluez' 'python')
+makedepends=('cmake' 'ninja' 'qt6-tools')
+optdepends=('pipewire-pulse: PulseAudio compatibility for Omarchy audio'
+            'wireplumber: Bluetooth audio and AVRCP controls'
+            'waybar: battery and noise mode in the bar')
+provides=('librepods')
+conflicts=('librepods' 'librepods-git')
+source=()
+sha256sums=()
+
+prepare() {
+    test -f "$startdir/linux/CMakeLists.txt" || {
+        printf '%s\n' 'Run makepkg from the LibrePods repository root.' >&2
+        return 1
+    }
+    mkdir -p "$srcdir/librepods/packaging"
+    cp -a "$startdir/linux" "$srcdir/librepods/"
+    cp -a "$startdir/packaging/omarchy" "$srcdir/librepods/packaging/"
+}
+
+build() {
+    cmake -S "$srcdir/librepods/linux" -B "$srcdir/build" -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTING=ON
+    cmake --build "$srcdir/build"
+}
+
+check() {
+    ctest --test-dir "$srcdir/build" --output-on-failure
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install "$srcdir/build"
+    install -Dm644 "$startdir/packaging/omarchy/waybar.jsonc" \
+        "$pkgdir/usr/share/librepods/omarchy/waybar.jsonc"
+    install -Dm644 "$startdir/packaging/omarchy/hyprland.conf" \
+        "$pkgdir/usr/share/librepods/omarchy/hyprland.conf"
+}

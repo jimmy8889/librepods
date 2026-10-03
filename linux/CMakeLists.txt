@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.16)
 
 project(linux VERSION 0.1 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Widgets Bluetooth DBus LinguistTools)
 find_package(OpenSSL REQUIRED)
@@ -110,3 +113,14 @@ qt_add_translations(librepods
 # Install translation files
 install(FILES ${QM_FILES}
     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/librepods/translations")
+
+install(PROGRAMS ../packaging/omarchy/librepods-waybar
+    DESTINATION "${CMAKE_INSTALL_BINDIR}")
+include(CTest)
+if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    qt_add_executable(desktop-protocol-test tests/protocol.cpp battery.hpp eardetection.hpp)
+    target_include_directories(desktop-protocol-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(desktop-protocol-test PRIVATE Qt6::Test)
+    add_test(NAME desktop-protocol COMMAND desktop-protocol-test)
+endif()

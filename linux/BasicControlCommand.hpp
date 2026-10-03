@@ -1,4 +1,6 @@
+#pragma once
 #include <QByteArray>
+#include <optional>
 
 // Control Command Header
 namespace ControlCommand
@@ -20,7 +22,7 @@ namespace ControlCommand
 
     inline std::optional<char> parseActive(const QByteArray &data)
     {
-        if (!data.startsWith(ControlCommand::HEADER))
+        if (data.size() != 11 || !data.startsWith(ControlCommand::HEADER))
             return std::nullopt;
 
         return static_cast<quint8>(data.at(7));
@@ -45,6 +47,8 @@ struct BasicControlCommand
     // Basically returns the byte at the index 7
     static std::optional<bool> parseState(const QByteArray &data)
     {
+        if (!data.startsWith(HEADER))
+            return std::nullopt;
         switch (ControlCommand::parseActive(data).value_or(0x00))
         {
         case 0x01: // Enabled

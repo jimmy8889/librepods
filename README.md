@@ -88,6 +88,12 @@ Since this needs deeper integration with audio on Android, it will most likely n
 
 - [**Android**](/android/README.md)
 - [**Linux**](/linux/README.md)
+- [**Omarchy (Arch/Hyprland)**](/packaging/omarchy/README.md)
+- [**Windows development integration (NTPods)**](/windows/README.md)
+
+This fork's [desktop support status](/docs/desktop-support.md) distinguishes
+implemented features, build checks and pending hardware validation. Windows
+currently requires development driver signing; it is not a production signed release.
 
 # VendorID Spoofing
 

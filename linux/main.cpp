@@ -1,4 +1,8 @@
 #include <QSettings>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLockFile>
+#include "ipc.hpp"
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QApplication>
@@ -137,6 +141,22 @@ public:
     DeviceInfo *deviceInfo() const { return m_deviceInfo; }
     QString phoneMacStatus() const { return m_phoneMacStatus; }
     bool hearingAidEnabled() const { return m_deviceInfo->hearingAidEnabled(); }
+
+    QJsonObject desktopStatus() const {
+        const auto *b = m_deviceInfo->getBattery();
+        const bool connected = areAirpodsConnected();
+        auto level = [connected](bool available, int value) -> QJsonValue {
+            return connected && available ? QJsonValue(value) : QJsonValue(QJsonValue::Null);
+        };
+        return {{"connected", connected}, {"name", m_deviceInfo->deviceName()},
+                {"noise_mode", connected ? QJsonValue(m_deviceInfo->noiseControlModeInt()) : QJsonValue(QJsonValue::Null)},
+                {"left", level(b->isLeftPodAvailable(), b->getLeftPodLevel())},
+                {"right", level(b->isRightPodAvailable(), b->getRightPodLevel())},
+                {"case", level(b->isCaseAvailable(), b->getCaseLevel())},
+                {"headset", level(b->isHeadsetAvailable(), b->getHeadsetLevel())},
+                {"conversation_awareness", connected ? QJsonValue(m_deviceInfo->conversationalAwareness()) : QJsonValue(QJsonValue::Null)}};
+    }
+
 
 private:
     bool debugMode;
@@ -1010,25 +1030,19 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    QLocalServer::removeServer("app_server");
-
-    QFile stale("/tmp/app_server");
-    if (stale.exists())
-        stale.remove();
-
-    QLocalSocket socket_check;
-    socket_check.connectToServer("app_server");
-
-    if (socket_check.waitForConnected(300)) {
-        LOG_INFO("Another instance already running! Reopening window...");
-
-        socket_check.write("reopen");
-        socket_check.flush();
-        socket_check.waitForBytesWritten(200);
-        socket_check.disconnectFromServer();
-
-        return 0;
+    QLockFile instanceLock(librePodsSocketName() + ".lock");
+    if (!instanceLock.tryLock(0)) {
+        QLocalSocket existing;
+        existing.connectToServer(librePodsSocketName());
+        if (existing.waitForConnected(1000)) {
+            existing.write("reopen\n");
+            existing.waitForBytesWritten(1000);
+            return 0;
+        }
+        LOG_ERROR("LibrePods is already starting or running");
+        return 1;
     }
+    QLocalServer::removeServer(librePodsSocketName());
     app.setDesktopFileName("me.kavishdevar.librepods");
     app.setQuitOnLastWindowClosed(false);
 
@@ -1063,7 +1077,8 @@ int main(int argc, char *argv[]) {
     QLocalServer server;
     QLocalServer::removeServer("app_server");
 
-    if (!server.listen("app_server"))
+    server.setSocketOptions(QLocalServer::UserAccessOption);
+    if (!server.listen(librePodsSocketName()))
     {
         LOG_ERROR("Unable to start the listening server");
         LOG_DEBUG("Server error: " << server.errorString());
@@ -1073,51 +1088,62 @@ int main(int argc, char *argv[]) {
         LOG_DEBUG("Server started, waiting for connections...");
     }
     QObject::connect(&server, &QLocalServer::newConnection, [&]() {
-        QLocalSocket* socket = server.nextPendingConnection();
-        // Handles Proper Connection
-        QObject::connect(socket, &QLocalSocket::readyRead, [socket, &engine, &trayApp]() {
-            QString msg = socket->readAll();
-            // Check if the message is "reopen", if so, trigger onOpenApp function
-            if (msg == "reopen") {
-                LOG_INFO("Reopening app window");
-                QObject *rootObject = engine.rootObjects().first();
-                if (rootObject) {
-                    QMetaObject::invokeMethod(rootObject, "reopen", Q_ARG(QVariant, "app"));
+        while (server.hasPendingConnections()) {
+            QLocalSocket *client = server.nextPendingConnection();
+            QObject::connect(client, &QLocalSocket::disconnected, client, &QObject::deleteLater);
+            // Bound requests and dispose of clients that never finish a command.
+            auto *deadline = new QTimer(client);
+            deadline->setSingleShot(true);
+            deadline->start(3000);
+            QObject::connect(deadline, &QTimer::timeout, client, &QLocalSocket::disconnectFromServer);
+            QObject::connect(client, &QLocalSocket::readyRead, client, [client, deadline, &engine, &trayApp]() {
+                if (client->property("subscribed").toBool()) { client->disconnectFromServer(); return; }
+                QByteArray buffer = client->property("request").toByteArray() + client->readAll();
+                if (buffer.size() > 256) { client->disconnectFromServer(); return; }
+                client->setProperty("request", buffer);
+                if (!buffer.contains('\n')) return;
+                deadline->stop();
+                const QString msg = QString::fromUtf8(buffer.left(buffer.indexOf('\n')));
+                auto sendStatus = [client, &trayApp]() {
+                    client->write(QJsonDocument(trayApp->desktopStatus()).toJson(QJsonDocument::Compact) + '\n');
+                };
+                if (msg == "status" || msg == "watch") {
+                    sendStatus();
+                    if (msg == "watch") {
+                        client->setProperty("subscribed", true);
+                        QObject::connect(trayApp, &AirPodsTrayApp::airPodsStatusChanged, client, sendStatus);
+                        auto *info = trayApp->deviceInfo();
+                        QObject::connect(info, &DeviceInfo::batteryStatusChanged, client, sendStatus);
+                        QObject::connect(info, &DeviceInfo::noiseControlModeChangedInt, client, sendStatus);
+                        QObject::connect(info, &DeviceInfo::conversationalAwarenessChanged, client, sendStatus);
+                        QObject::connect(info, &DeviceInfo::deviceNameChanged, client, sendStatus);
+                        return;
+                    }
+                } else {
+                    QString error;
+                    if (msg == "reopen") {
+                        if (!engine.rootObjects().isEmpty())
+                            QMetaObject::invokeMethod(engine.rootObjects().first(), "reopen", Q_ARG(QVariant, "app"));
+                        else trayApp->loadMainModule();
+                    } else if (!trayApp->areAirpodsConnected()) {
+                        error = "AirPods are disconnected";
+                    } else if (msg == "noise:off") trayApp->setNoiseControlModeInt(0);
+                    else if (msg == "noise:anc") trayApp->setNoiseControlModeInt(1);
+                    else if (msg == "noise:transparency") trayApp->setNoiseControlModeInt(2);
+                    else if (msg == "noise:adaptive") trayApp->setNoiseControlModeInt(3);
+                    else if (msg == "conversation:on") trayApp->setConversationalAwareness(true);
+                    else if (msg == "conversation:off") trayApp->setConversationalAwareness(false);
+                    else if (msg == "one-bud-anc:on") trayApp->setOneBudANCMode(true);
+                    else if (msg == "one-bud-anc:off") trayApp->setOneBudANCMode(false);
+                    else error = "Unknown command";
+                    QJsonObject result{{"ok", error.isEmpty()}};
+                    if (!error.isEmpty()) result.insert("error", error);
+                    else result.insert("status", msg == "reopen" ? "opened" : "requested");
+                    client->write(QJsonDocument(result).toJson(QJsonDocument::Compact) + '\n');
                 }
-                else
-                {
-                    trayApp->loadMainModule();
-                }
-            }
-            else if (msg == "noise:off") {
-                trayApp->setNoiseControlModeInt(0);
-            }
-            else if (msg == "noise:anc") {
-                trayApp->setNoiseControlModeInt(1);
-            }
-            else if (msg == "noise:transparency") {
-                trayApp->setNoiseControlModeInt(2);
-            }
-            else if (msg == "noise:adaptive") {
-                trayApp->setNoiseControlModeInt(3);
-            }
-            else
-            {
-                LOG_ERROR("Unknown message received: " << msg);
-            }
-            socket->disconnectFromServer();
-        });
-        // Handles connection errors
-        QObject::connect(socket, &QLocalSocket::errorOccurred, [socket]() {
-            LOG_ERROR("Failed to connect to the duplicate app instance");
-            LOG_DEBUG("Connection error: " << socket->errorString());
-        });
-
-        // Handle server-level errors
-        QObject::connect(&server, &QLocalServer::serverError, [&]() {
-            LOG_ERROR("Server failed to accept a new connection");
-            LOG_DEBUG("Server error: " << server.errorString());
-        });
+                client->disconnectFromServer();
+            });
+        }
     });
 
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
@@ -1127,10 +1153,7 @@ int main(int argc, char *argv[]) {
             server.close();
         }
 
-        QLocalServer::removeServer("app_server");
-        QFile stale("/tmp/app_server");
-        if (stale.exists())
-            stale.remove();
+        QLocalServer::removeServer(librePodsSocketName());
     });
     return app.exec();
 }
