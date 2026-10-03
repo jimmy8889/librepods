@@ -133,6 +133,7 @@ class AirPodsControlsTileService : AirPodsStatusTile() {
         renderControls()
     }
 
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated") // API <34 needs the Intent overload.
     private fun renderControls() {
         val row = controlRow ?: return
         val service = ServiceManager.getService()

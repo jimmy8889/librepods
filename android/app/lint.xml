@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- These screens extend ComponentActivity directly and do not host fragments.
+         The Activity library check is global and ignores class @SuppressLint. -->
+    <issue id="InvalidFragmentVersionForActivityResult">
+        <ignore path="src/main/java/me/kavishdevar/librepods/experimental/ExperimentsActivity.kt" />
+        <ignore path="src/main/java/me/kavishdevar/librepods/finding/FindAirPodsActivity.kt" />
+        <ignore path="src/main/java/me/kavishdevar/librepods/finding/UwbExperimentActivity.kt" />
+        <ignore path="src/main/java/me/kavishdevar/librepods/workouts/WorkoutsActivity.kt" />
+    </issue>
+</lint>

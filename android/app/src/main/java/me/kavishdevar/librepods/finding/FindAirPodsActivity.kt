@@ -113,6 +113,10 @@ class FindAirPodsActivity : ComponentActivity() {
                         }
                         if (ringing) Button(onClick = { stopRinging() }) { Text("Stop ringing") }
                         HorizontalDivider()
+                        Text("Precision finding", style = MaterialTheme.typography.titleLarge)
+                        Text("UWB finding for the charging case is still under development. LibrePods cannot yet establish the case's authenticated session, so distance and direction are unavailable.")
+                        OutlinedButton(onClick = { startActivity(Intent(this@FindAirPodsActivity, UwbExperimentActivity::class.java)) }) { Text("UWB experiment") }
+                        HorizontalDivider()
                         Text("Last seen", style = MaterialTheme.typography.titleLarge)
                         Text(lastSeen)
                         Text("This saves this phone's location while the AirPods are connected. It is not live tracking. Saved locations may be approximate. Android backup settings apply.")

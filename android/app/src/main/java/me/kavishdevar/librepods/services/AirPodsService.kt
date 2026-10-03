@@ -1725,37 +1725,9 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         }
     }
 
-    @Suppress("KotlinUnreachableCode")
-    @OptIn(ExperimentalMaterial3Api::class)
+    // This fork reports connection failures in-app and never posts drawer alerts.
     private fun showSocketConnectionFailureNotification(errorMessage: String) {
-        return // something causes too many notifications. turning off for now
-        if (BuildConfig.FLAVOR != "xposed") {
-            Log.w(
-                TAG,
-                "Not showing BluetoothConnectionManager.aacpSocket? error notification to user, the service shouldn't be running if it isn't supported."
-            )
-            return
-        }
-        val notificationManager = getSystemService(NotificationManager::class.java)
-
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            notificationIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(this, "socket_connection_failure")
-            .setSmallIcon(R.drawable.airpods).setContentTitle("AirPods Connection Issue")
-            .setContentText("Unable to connect to AirPods over L2CAP").setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    "Your AirPods are connected via Bluetooth, but LibrePods couldn't connect to AirPods using L2CAP. Error: $errorMessage"
-                )
-            ).setContentIntent(pendingIntent).setCategory(Notification.CATEGORY_ERROR)
-            .setPriority(NotificationCompat.PRIORITY_HIGH).setAutoCancel(true).build()
-
-        notificationManager.notify(3, notification)
+        Log.w(TAG, "AirPods socket connection failed: $errorMessage")
     }
 
     fun isEarbudWorn(): Boolean = earDetectionNotification.status.any { it == 0.toByte() }
@@ -2461,7 +2433,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                                 )
                             }
                         }
-                        sendBroadcast(Intent(AirPodsNotifications.AIRPODS_L2CAP_CONNECTED))
+                        sendBroadcast(Intent(AirPodsNotifications.AIRPODS_L2CAP_CONNECTED).setPackage(packageName))
                     } catch (e: Exception) {
 //                        sharedPreferences.edit { putBoolean("connection_successful", false) }
                         Log.d(
@@ -2668,7 +2640,8 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
                 override fun onServiceDisconnected(profile: Int) {}
             }, BluetoothProfile.A2DP)
             try {
-                device?.disconnect()
+                if (Build.VERSION.SDK_INT >= 37) device?.disconnect()
+                else device?.javaClass?.getMethod("disconnect")?.invoke(device)
             } catch (e: Exception) {
                 Log.w(TAG, "device.disconnect() failed, $e")
             }

@@ -107,6 +107,7 @@ fun AppSettingsScreen(
     navigateToOpenSourceLicenses: () -> Unit,
     navigateToReleaseNotesScreen: () -> Unit
 ) {
+    val tileLabel = stringResource(R.string.row_name)
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val state by viewModel.uiState.collectAsState()
@@ -208,7 +209,7 @@ fun AppSettingsScreen(
                 onClick = {
                     context.getSystemService(android.app.StatusBarManager::class.java).requestAddTileService(
                         android.content.ComponentName(context, me.kavishdevar.librepods.services.AirPodsControlsTileService::class.java),
-                        context.getString(R.string.row_name),
+                        tileLabel,
                         android.graphics.drawable.Icon.createWithResource(context, R.drawable.airpods),
                         context.mainExecutor
                     ) { result ->

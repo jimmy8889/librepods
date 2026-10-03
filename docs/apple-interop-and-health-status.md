@@ -2,6 +2,10 @@
 
 Checked 2026-09-28. No new interoperability feature is enabled by this document.
 
+2026-10-03 implementation update: Android has a foreground raw UWB test engine
+and phone capability checks. See [Android UWB status](android-uwb-status.md) for
+the negotiated-peer test and the missing AirPods case authentication.
+
 ## Samsung Health: export now verified on the owner's phone
 
 The owner's screenshot shows a daily session at 28 September 01:19 with one

@@ -85,6 +85,10 @@ class ExperimentsActivity : ComponentActivity() {
                             }
                         }
                         if (message.isNotEmpty()) Text(message)
+                        HorizontalDivider()
+                        Text("Ultra-wideband", style = MaterialTheme.typography.titleLarge)
+                        Text("Check the phone's UWB radio and test a negotiated session. AirPods case precision finding is still under development.")
+                        OutlinedButton(onClick = { startActivity(Intent(this@ExperimentsActivity, me.kavishdevar.librepods.finding.UwbExperimentActivity::class.java)) }) { Text("Open UWB experiment") }
                         TextButton(onClick = { finish() }) { Text("Back") }
                     }
                 }

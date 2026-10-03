@@ -11,6 +11,8 @@ for prop in ro.product.manufacturer ro.product.model ro.build.version.release ro
 done
 printf '\nUWB advertised by firmware:\n'
 adb "${adb_args[@]}" shell pm has-feature android.hardware.uwb
+printf '\nLibrePods unified ranging permission (Android 16+):\n'
+adb "${adb_args[@]}" shell pm check-permission android.permission.RANGING me.kavishdevar.librepods
 printf '\nRelevant installed package versions:\n'
 for package in me.kavishdevar.librepods com.sec.android.app.shealth com.google.android.healthconnect.controller com.google.android.apps.healthdata com.android.healthconnect.controller moe.shizuku.privileged.api; do
     printf '%s\n' "$package"
