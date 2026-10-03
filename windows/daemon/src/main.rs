@@ -9,14 +9,14 @@
 // No longer called — kept for a quick revert if the stereo-restore ever proves
 // necessary; see the note in set_mic(). (Crate-level allow(dead_code) covers it.)
 mod a2dp;
-mod aap;
+use ntpodsd::aap;
 mod bt;
 mod devnode;
 mod driver;
 mod eld;
 mod gatt;
 mod hearing;
-mod hr;
+use ntpodsd::hr;
 mod hrdb;
 mod le;
 mod media;
