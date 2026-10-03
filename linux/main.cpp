@@ -702,8 +702,6 @@ private slots:
         {
             auto keys = AirPodsPackets::MagicPairing::parseMagicCloudKeysPacket(data);
             LOG_INFO("Received Magic Cloud Keys:");
-            LOG_INFO("MagicAccIRK: " << keys.magicAccIRK.toHex());
-            LOG_INFO("MagicAccEncKey: " << keys.magicAccEncKey.toHex());
 
             // Store the keys
             m_deviceInfo->setMagicAccIRK(keys.magicAccIRK);
@@ -742,11 +740,12 @@ private slots:
             mediaController->handleEarDetection(m_deviceInfo->getEarDetection());
         }
         // Battery Status
-        else if ((data.size() == 22 || data.size() == 12) && data.startsWith(AirPodsPackets::Parse::BATTERY_STATUS))
+        else if (data.startsWith(AirPodsPackets::Parse::BATTERY_STATUS))
         {
-            m_deviceInfo->getBattery()->parsePacket(data);
-            m_deviceInfo->updateBatteryStatus();
-            LOG_INFO("Battery status: " << m_deviceInfo->batteryStatus());
+            if (m_deviceInfo->getBattery()->parsePacket(data)) {
+                m_deviceInfo->updateBatteryStatus();
+                LOG_INFO("Battery status: " << m_deviceInfo->batteryStatus());
+            }
         }
         // Conversational Awareness Data
         else if (data.size() == 10 && data.startsWith(AirPodsPackets::ConversationalAwareness::DATA_HEADER))
@@ -1075,7 +1074,6 @@ int main(int argc, char *argv[]) {
     trayApp->loadMainModule();
 
     QLocalServer server;
-    QLocalServer::removeServer("app_server");
 
     server.setSocketOptions(QLocalServer::UserAccessOption);
     if (!server.listen(librePodsSocketName()))

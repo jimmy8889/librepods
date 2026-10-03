@@ -10,7 +10,7 @@ private slots:
     void rejectsTruncatedNotifications() {
         Battery battery;
         EarDetection ears;
-        const auto b = QByteArray::fromHex("04000400040003040150020102016002010801700101");
+        const auto b = QByteArray::fromHex("04000400040003040150020102013c02010801460101");
         const auto e = QByteArray::fromHex("0400040006000001");
         for (int n = 0; n < b.size(); ++n) QVERIFY(!battery.parsePacket(b.left(n)));
         QVERIFY(battery.parsePacket(b));
@@ -30,6 +30,10 @@ private slots:
         QCOMPARE(battery.getLeftPodLevel(), quint8(80));
         QVERIFY(battery.parsePacket(QByteArray::fromHex("040004000400010401000401")));
         QVERIFY(!battery.isLeftPodAvailable());
+        QVERIFY(battery.parsePacket(QByteArray::fromHex("0400040004000204010005010801000201")));
+        QVERIFY(battery.isLeftPodCharging());
+        QVERIFY(battery.isLeftPodAvailable());
+        QCOMPARE(battery.getLeftPodLevel(), quint8(0));
     }
 };
 QTEST_GUILESS_MAIN(ProtocolTest)

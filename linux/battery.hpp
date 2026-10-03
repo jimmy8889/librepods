@@ -34,6 +34,8 @@ public:
 
     void reset()
     {
+        primaryPod = Component::Left;
+        secondaryPod = Component::Right;
         // Initialize all components to unknown state
         states[Component::Headset] = {};
         states[Component::Left] = {};
@@ -57,6 +59,7 @@ public:
         Charging = 0x01,
         Discharging = 0x02,
         Disconnected = 0x04,
+        ChargingInCase = 0x05,
     };
     Q_ENUM(BatteryStatus)
 
@@ -77,7 +80,7 @@ public:
 
         // Get battery count (number of components)
         quint8 batteryCount = static_cast<quint8>(packet[6]);
-        if (batteryCount > 3 || packet.size() != 7 + 5 * batteryCount)
+        if (batteryCount == 0 || batteryCount > 4 || packet.size() != 7 + 5 * batteryCount)
         {
             return false; // Invalid count or size mismatch
         }
@@ -107,7 +110,7 @@ public:
                 comp != Component::Right && comp != Component::Case)
                 return false;
             if (status != BatteryStatus::Charging && status != BatteryStatus::Discharging &&
-                status != BatteryStatus::Disconnected)
+                status != BatteryStatus::Disconnected && status != BatteryStatus::ChargingInCase)
                 return false;
             if (status != BatteryStatus::Disconnected && level > 100)
                 return false;
@@ -278,7 +281,8 @@ signals:
 private:
     bool isStatus(Component component, BatteryStatus status) const
     {
-        return states.value(component).status == status;
+        const auto current = states.value(component).status;
+        return current == status || (status == BatteryStatus::Charging && current == BatteryStatus::ChargingInCase);
     }
 
     std::pair<bool, int> formatBattery(unsigned char byteVal)
@@ -289,6 +293,6 @@ private:
     }
 
     QMap<Component, BatteryState> states;
-    Component primaryPod;
-    Component secondaryPod;
+    Component primaryPod = Component::Left;
+    Component secondaryPod = Component::Right;
 };
