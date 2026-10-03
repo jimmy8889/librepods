@@ -23,7 +23,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 dest="$here/vendor/ffmpeg"
 
 # Already fetched (or vendored) — nothing to do.
-if [ -f "$dest/lib/libavcodec.dll.a" ] || [ -f "$dest/lib/avcodec.lib" ]; then
+if { [ -f "$dest/lib/libavcodec.dll.a" ] || [ -f "$dest/lib/avcodec.lib" ]; } && [ -f "$dest/LICENSE.txt" ]; then
   echo "ffmpeg already present in $dest"
   exit 0
 fi
@@ -43,6 +43,7 @@ unzip -q "$tmp/ff.zip" -d "$tmp/x"
 root="$(find "$tmp/x" -maxdepth 1 -type d -name 'ffmpeg*' | head -1)"
 
 mkdir -p "$dest/include" "$dest/lib" "$dest/bin"
+cp "$root/LICENSE.txt" "$dest/LICENSE.txt"
 cp -r "$root"/include/libavcodec "$root"/include/libavutil "$root"/include/libswresample "$dest/include/"
 # import libs — both MSVC (.lib) and MinGW (.dll.a)
 cp "$root"/lib/avcodec.lib "$root"/lib/avutil.lib "$root"/lib/swresample.lib "$dest/lib/"

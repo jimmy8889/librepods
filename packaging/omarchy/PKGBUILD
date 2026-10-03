@@ -1,4 +1,4 @@
-# Build from repository root: makepkg -si -p packaging/omarchy/PKGBUILD
+# From packaging/omarchy: makepkg -si
 pkgname=librepods-omarchy
 pkgver=0.1.0
 pkgrel=1
@@ -18,13 +18,14 @@ source=()
 sha256sums=()
 
 prepare() {
-    test -f "$startdir/linux/CMakeLists.txt" || {
-        printf '%s\n' 'Run makepkg from the LibrePods repository root.' >&2
+    test -f "$startdir/../../linux/CMakeLists.txt" || {
+        printf '%s\n' 'Run makepkg from packaging/omarchy in the LibrePods checkout.' >&2
         return 1
     }
     mkdir -p "$srcdir/librepods/packaging"
-    cp -a "$startdir/linux" "$srcdir/librepods/"
-    cp -a "$startdir/packaging/omarchy" "$srcdir/librepods/packaging/"
+    cp -a "$startdir/../../linux" "$srcdir/librepods/"
+    mkdir -p "$srcdir/librepods/packaging/omarchy"
+    cp "$startdir/librepods-waybar" "$srcdir/librepods/packaging/omarchy/"
 }
 
 build() {
@@ -39,8 +40,10 @@ check() {
 
 package() {
     DESTDIR="$pkgdir" cmake --install "$srcdir/build"
-    install -Dm644 "$startdir/packaging/omarchy/waybar.jsonc" \
+    install -Dm644 "$startdir/waybar.jsonc" \
         "$pkgdir/usr/share/librepods/omarchy/waybar.jsonc"
-    install -Dm644 "$startdir/packaging/omarchy/hyprland.conf" \
+    install -Dm644 "$startdir/hyprland.conf" \
         "$pkgdir/usr/share/librepods/omarchy/hyprland.conf"
+    install -Dm644 "$startdir/hyprland.lua" \
+        "$pkgdir/usr/share/librepods/omarchy/hyprland.lua"
 }

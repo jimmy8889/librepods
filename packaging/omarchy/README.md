@@ -6,8 +6,8 @@ for audio integration. No subscription or Android bridge is needed.
 
 ```bash
 git clone --branch codex/desktop-windows-omarchy https://github.com/jimmy8889/librepods.git
-cd librepods
-makepkg -si -p packaging/omarchy/PKGBUILD
+cd librepods/packaging/omarchy
+makepkg -si
 librepods
 ```
 
@@ -16,12 +16,23 @@ LibrePods. Leave the existing PipeWire/WirePlumber audio stack in place.
 Do not run the app as root. Dependencies are declared in the PKGBUILD;
 `makepkg -s` asks pacman to install missing packages normally.
 
-## Tray, startup and Waybar
+## Current Omarchy shell and startup
+
+Current Omarchy uses a Quickshell bar and Lua configuration. The native Qt tray
+icon appears in the shell's tray drawer. Open it to see batteries and controls;
+you do not need Waybar. Add `o.launch_on_start("librepods --hide")` once to
+`~/.config/hypr/autostart.lua`. Optional Lua bindings are in
+[hyprland.lua](hyprland.lua). Use this syntax only if your installation has
+`hyprland.lua`; the older configuration is described below.
+
+These paths follow the [current Omarchy dotfiles manual](https://omarchy.org/manual/dotfiles/).
+
+## Omarchy 3 / older Waybar setup
 
 Keep `tray` in your Waybar modules so the LibrePods icon is visible. The Qt UI
 also opens from the application launcher or `librepods`.
 
-Add `exec-once = librepods --hide` once to your own Hyprland autostart file,
+For installations using `hyprland.conf`, add `exec-once = librepods --hide` once to your own Hyprland autostart file,
 or use the app's autostart setting. Choose one to avoid duplicate startup.
 Optional Hyprland bindings are in [hyprland.conf](hyprland.conf).
 

@@ -13,6 +13,7 @@ private slots:
         const auto b = QByteArray::fromHex("04000400040003040150020102016002010801700101");
         const auto e = QByteArray::fromHex("0400040006000001");
         for (int n = 0; n < b.size(); ++n) QVERIFY(!battery.parsePacket(b.left(n)));
+        QVERIFY(battery.parsePacket(b));
         for (int n = 0; n < e.size(); ++n) QVERIFY(!ears.parseData(e.left(n)));
         QVERIFY(ears.parseData(e));
         QVERIFY(ears.isPrimaryInEar());

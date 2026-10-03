@@ -93,6 +93,10 @@ Get-ChildItem (Join-Path $Out 'driver'), (Join-Path $Out 'driver-mic'), (Join-Pa
 # ---- daemon + the FFmpeg runtime it links against ---------------------------
 Copy-Item $DaemonExe $Out -Force
 Copy-Item (Join-Path $win 'daemon\vendor\ffmpeg\bin\*.dll') $Out -Force
+Copy-Item (Join-Path $win 'daemon\vendor\ffmpeg\LICENSE.txt') (Join-Path $Out 'LICENSE-FFmpeg.txt') -Force
+Copy-Item (Join-Path $win 'LICENSE.ntpods') (Join-Path $Out 'LICENSE-NTPods.txt') -Force
+Copy-Item (Join-Path $win 'PROVENANCE.md') $Out -Force
+Copy-Item (Join-Path $repo 'docs\desktop-support.md') $Out -Force
 
 # ---- WinUI app (unpackaged + self-contained: a whole folder) ----------------
 Copy-Item (Join-Path $WinUIDir '*') (Join-Path $Out 'winui') -Recurse -Force
@@ -110,7 +114,8 @@ $required = @(
     'driver-mic\NTPodsMicPC.inf', 'driver-mic\NTPodsMicPC.sys', 'driver-mic\ntpodsmicpc.cat',
     'driver-mic-acx\AudioCodec.inf', 'driver-mic-acx\AudioCodec.sys', 'driver-mic-acx\audiocodec.cat',
     'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
-    'winui\ntpods-winui.exe', 'winui\ntpods-winui.pri'
+    'winui\ntpods-winui.exe', 'winui\ntpods-winui.pri',
+    'LICENSE-FFmpeg.txt', 'LICENSE-NTPods.txt', 'PROVENANCE.md', 'desktop-support.md'
 )
 $missing = @($required | Where-Object { -not (Test-Path (Join-Path $Out $_)) })
 if ($missing) { throw "Dist is incomplete, missing: $($missing -join ', ')" }
