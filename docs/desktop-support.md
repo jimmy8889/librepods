@@ -1,5 +1,8 @@
 # Windows and Omarchy desktop support
 
+See the [validated builds and download links](desktop-validation.md) for the
+2026-10-03 verification record.
+
 This fork has two native desktop paths:
 
 - **Omarchy:** the existing Qt/BlueZ LibrePods app, packaged for Arch, with
