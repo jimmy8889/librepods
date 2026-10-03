@@ -5,9 +5,14 @@ Windows Bluetooth transport. Read [integration status](../docs/desktop-support.m
 and [source provenance](PROVENANCE.md) first. The Windows CI builds a ZIP folder
 and an MSI from source; it does not publish releases or install drivers.
 
-Driver installation requires an explicit user decision about test signing and
-Secure Boot. No setup command here is run automatically by this fork.
-The detailed upstream instructions below describe a development installation.
+Secure Boot must remain enabled on the user's PC. The current development
+drivers cannot load under Secure Boot; Microsoft-signed drivers are required.
+Installers stop when Secure Boot is enabled and do not change boot settings.
+
+To restore Secure Boot after a development install, run `bcdedit /set testsigning off`
+in an administrator terminal, restart, then enable Secure Boot in firmware settings.
+Full NTPods controls will be unavailable until the drivers are Microsoft signed.
+The detailed upstream instructions below are for a separate development machine.
 
 ---
 

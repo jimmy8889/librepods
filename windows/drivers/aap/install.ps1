@@ -16,6 +16,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Check before creating certificates or installing devices. Never change boot settings.
+$secureBoot = $null
+try { $secureBoot = Confirm-SecureBootUEFI } catch { }
+if ($secureBoot -eq $true) {
+    throw 'Secure Boot is enabled. Keep it enabled; this development driver needs Microsoft signing before it can load.'
+}
 $sys = Join-Path $PackageDir 'NTPodsAAP.sys'
 $cat = Join-Path $PackageDir 'ntpodsaap.cat'
 $inf = Join-Path $PackageDir 'NTPodsAAP.inf'

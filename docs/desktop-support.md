@@ -40,9 +40,19 @@ Windows: [application and driver instructions](../windows/README.md).
 The `Build Windows desktop` workflow compiles the drivers, daemon, WinUI app
 and MSI, and uploads artifacts without automatically publishing releases.
 The MSI/ZIP is a **development build**: driver packages are not Microsoft signed.
-Installation needs an explicit decision to use Test Mode and disable Secure Boot.
+The user requires Secure Boot to remain enabled. These artifacts do not meet
+that requirement and should not be installed on their PC. Microsoft signing
+is required for the kernel drivers; self-signing does not provide compatibility.
 Build commands do not change those settings or install anything on a device.
 No remote PC or work iPhone is modified.
+
+LibrePods on Omarchy uses userspace Qt/BlueZ and does not require disabling
+Secure Boot. The operating system's boot chain is separate: the current
+[Omarchy installer guide](https://omarchy.org/manual/getting-started/) assumes
+Secure Boot is disabled. An existing Omarchy installation needs a correctly
+signed/trusted boot chain before enabling Secure Boot; do not infer that from
+this app package building successfully. No firmware keys or boot files are
+changed by this fork.
 
 Pure protocol tests can run on Linux:
 

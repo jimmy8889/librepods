@@ -30,8 +30,14 @@
       <RegistrySearch Id="BootOptions" Root="HKLM" Key="SYSTEM\CurrentControlSet\Control"
                       Name="SystemStartOptions" Type="raw" />
     </Property>
+    <Property Id="SECUREBOOTSTATE">
+      <RegistrySearch Id="SecureBootState" Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\SecureBoot\State"
+                      Name="UEFISecureBootEnabled" Type="raw" />
+    </Property>
+    <Launch Condition="Installed OR NOT (SECUREBOOTSTATE = &quot;#1&quot;)"
+            Message="Secure Boot is enabled. Keep it enabled; the bundled development drivers cannot load. A Microsoft-signed driver release is required." />
     <Launch Condition="Installed OR (BOOTOPTIONS ~&gt;&lt; &quot;TESTSIGNING&quot;)"
-            Message="Test Mode is not on, so Windows would refuse to load the NTPods drivers.&#13;&#10;&#13;&#10;1. If BitLocker is on, save your recovery key first (https://aka.ms/myrecoverykey or: manage-bde -protectors -get C:). Changing Secure Boot or Test Mode can make Windows ask for it at the next boot.&#13;&#10;2. Turn off Secure Boot in your firmware/BIOS.&#13;&#10;3. In an admin terminal run:  bcdedit /set testsigning on&#13;&#10;4. Reboot (&quot;Test Mode&quot; shows in the bottom-right corner) and run this installer again." />
+            Message="The bundled kernel drivers are development/test-signed only. If this PC must keep Secure Boot enabled, keep it enabled and wait for a Microsoft-signed driver release. This installer cannot provide full AirPods controls under Secure Boot." />
 
     <!-- The ACX mic driver only loads on Windows 11 22H2 (build 22621) or newer, so
          the "ACX microphone" feature below only exists there. VersionNT/WindowsBuild

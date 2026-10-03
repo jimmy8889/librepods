@@ -32,6 +32,9 @@ try {
             Stop-NTPods
         }
         'install' {
+            if ($Drivers -and ((Test-SecureBoot) -eq $true)) {
+                throw 'Secure Boot is enabled. Keep it enabled; these development drivers need Microsoft signing before they can load.'
+            }
             Stop-NTPods
             Remove-LegacyLibrePods $UserSid $LocalAppData $AppData
             Remove-ZipInstall $LocalAppData $AppData

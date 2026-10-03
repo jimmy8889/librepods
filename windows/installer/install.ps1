@@ -34,22 +34,12 @@ $sid = Get-CurrentUserSid
 
 # ---- 0. preflight: fail BEFORE touching certificates or drivers -------------
 if (-not (Test-Admin)) { throw 'Run this from an ADMINISTRATOR PowerShell.' }
+if ((Test-SecureBoot) -eq $true) {
+    throw 'Secure Boot is enabled. These development drivers are not Microsoft signed and cannot load with Secure Boot. Keep Secure Boot enabled; a Microsoft-signed driver release is required.'
+}
 $bitlocker = Test-BitLocker
 if (-not (Test-TestMode)) {
-    $secureBoot = switch (Test-SecureBoot) {
-        $true { 'Secure Boot is ON on this PC, so turn it off first.' }
-        $false { 'Secure Boot is already off.' }
-        default { "Couldn't read the Secure Boot state." }
-    }
-    $bl = if ($bitlocker) { "BitLocker is ON for $env:SystemDrive. $script:BitLockerAdvice" } else { 'BitLocker is off for the system drive.' }
-    throw @"
-Test Mode is not active, so Windows would refuse to load the NTPods drivers.
-  1. $bl
-  2. Disable Secure Boot in your firmware/BIOS (while it is on, bcdedit refuses).
-     $secureBoot
-  3. In an admin PowerShell:  bcdedit /set testsigning on
-  4. Reboot ("Test Mode" shows in the bottom-right corner), then run this again.
-"@
+    throw 'The bundled drivers are development/test-signed only and require Test Mode. For a PC that must keep Secure Boot enabled, wait for Microsoft-signed drivers. No boot settings were changed.'
 }
 # Test Mode is on, but whoever turns it (or Secure Boot) back off later hits the
 # same BitLocker prompt, so make sure the key is saved before going further.
