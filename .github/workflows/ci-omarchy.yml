@@ -1,7 +1,7 @@
 name: Build Omarchy package
 on:
   push:
-    branches: ['codex/desktop-windows-omarchy']
+    branches: ['codex/desktop-windows-omarchy', 'codex/update-librepods-1.0.1-rc1']
     paths: ['linux/**', 'packaging/omarchy/**', '.github/workflows/ci-omarchy.yml']
   pull_request:
     paths: ['linux/**', 'packaging/omarchy/**', '.github/workflows/ci-omarchy.yml']

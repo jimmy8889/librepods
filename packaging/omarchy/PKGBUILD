@@ -1,6 +1,6 @@
 # From packaging/omarchy: makepkg -si
 pkgname=librepods-omarchy
-pkgver=0.1.0
+pkgver=1.0.1rc1
 pkgrel=1
 pkgdesc='LibrePods AirPods controls, tray and Waybar integration for Omarchy'
 arch=('x86_64' 'aarch64')

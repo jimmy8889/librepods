@@ -1,5 +1,9 @@
 # Desktop validation — 2026-10-03
 
+For the later upstream integration and rebuilt Omarchy package, see the
+[v1.0.1-rc1 update record](release-1.0.1-rc1.md). The results below describe
+the original desktop build.
+
 Both desktop builds completed successfully. No AirPods hardware or target
 Windows/Omarchy desktop was attached for acceptance testing.
 

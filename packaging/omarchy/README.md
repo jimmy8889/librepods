@@ -4,8 +4,13 @@ Build the native Qt application as an Arch package. It uses BlueZ for the
 AirPods control connection and Omarchy's existing PipeWire PulseAudio server
 for audio integration. No subscription or Android bridge is needed.
 
+The `1.0.1rc1-1` package tracks this fork's integration of upstream release
+`v1.0.1-rc1`. That release changes Android; the upstream Qt Linux source is
+unchanged. The package retains our CLI, tray, Hyprland and optional Waybar
+integration. AirPods case UWB finding remains unsupported.
+
 ```bash
-git clone --branch codex/desktop-windows-omarchy https://github.com/jimmy8889/librepods.git
+git clone --branch codex/update-librepods-1.0.1-rc1 https://github.com/jimmy8889/librepods.git
 cd librepods/packaging/omarchy
 makepkg -si
 librepods
