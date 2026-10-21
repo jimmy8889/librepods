@@ -46,7 +46,7 @@ object BatteryStatus {
 }
 
 @Parcelize
-data class Battery(val component: Int, val level: Int, val status: Int) : Parcelable {
+data class Battery(val component: Int, val level: Int, val status: Int, val estimated: Boolean = false) : Parcelable {
     fun getComponentName(): String? {
         return when (component) {
             BatteryComponent.LEFT -> "LEFT"
@@ -154,73 +154,54 @@ class AirPodsNotifications {
     }
 
     class BatteryNotification {
-        private var first: Battery = Battery(BatteryComponent.LEFT, 0, BatteryStatus.DISCONNECTED)
-        private var second: Battery = Battery(BatteryComponent.RIGHT, 0, BatteryStatus.DISCONNECTED)
-        private var case: Battery = Battery(BatteryComponent.CASE, 0, BatteryStatus.DISCONNECTED)
+        private val batteries = linkedMapOf(
+            BatteryComponent.LEFT to Battery(BatteryComponent.LEFT, -1, BatteryStatus.DISCONNECTED),
+            BatteryComponent.RIGHT to Battery(BatteryComponent.RIGHT, -1, BatteryStatus.DISCONNECTED),
+            BatteryComponent.CASE to Battery(BatteryComponent.CASE, -1, BatteryStatus.DISCONNECTED),
+        )
+        private val preciseComponents = mutableSetOf<Int>()
+        private val liveStatuses = setOf(BatteryStatus.CHARGING, BatteryStatus.NOT_CHARGING, BatteryStatus.OPTIMIZED_CHARGING)
+        private val prefix = byteArrayOf(4, 0, 4, 0, 4, 0)
 
-        fun isBatteryData(data: ByteArray): Boolean {
-            if (data.joinToString("") { "%02x".format(it) }.startsWith("040004000400")) {
-                Log.d("BatteryNotification", "Battery data starts with 040004000400. Most likely is a battery packet.")
+        fun isBatteryData(data: ByteArray): Boolean = data.size == 22 && data.take(6) == prefix.toList()
+
+        private fun update(component: Int, level: Int?, status: Int, onlyMissing: Boolean = false, estimated: Boolean = false) {
+            val previous = batteries[component] ?: return
+            if (onlyMissing && component in preciseComponents && previous.level in 0..100 && previous.status in liveStatuses) return
+            batteries[component] = if (level != null && level in 0..100 && status in liveStatuses) {
+                Battery(component, level, status, estimated)
             } else {
-                return false
+                // Disconnected 0 and 0xff are absence markers, not an empty battery.
+                previous.copy(status = BatteryStatus.DISCONNECTED)
             }
-            if (data.size != 22) {
-                Log.d("BatteryNotification", "Battery data size is not 22, probably being used with Airpods with fewer or more battery count.")
-                return false
-            }
-            Log.d("BatteryNotification", data.joinToString("") { "%02x".format(it) }.startsWith("040004000400").toString())
-            return data.joinToString("") { "%02x".format(it) }.startsWith("040004000400")
         }
 
-        fun setBatteryDirect(
-            leftLevel: Int,
-            leftCharging: Boolean,
-            rightLevel: Int,
-            rightCharging: Boolean,
-            caseLevel: Int,
-            caseCharging: Boolean
-        ) {
-            first = Battery(BatteryComponent.LEFT, leftLevel, if (leftCharging) BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING)
-            second = Battery(BatteryComponent.RIGHT, rightLevel, if (rightCharging) BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING)
-            case = Battery(BatteryComponent.CASE, caseLevel, if (caseCharging) BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING)
+        @Synchronized fun setBatteryDirect(
+            leftLevel: Int?, leftCharging: Boolean, rightLevel: Int?, rightCharging: Boolean,
+            caseLevel: Int?, caseCharging: Boolean, preferExisting: Boolean = false, estimated: Boolean = true
+        ): Boolean {
+            val previous = batteries.values.toList()
+            if (!preferExisting) preciseComponents.clear()
+            update(BatteryComponent.LEFT,leftLevel,if(leftCharging)BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING,preferExisting,estimated)
+            update(BatteryComponent.RIGHT,rightLevel,if(rightCharging)BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING,preferExisting,estimated)
+            update(BatteryComponent.CASE,caseLevel,if(caseCharging)BatteryStatus.CHARGING else BatteryStatus.NOT_CHARGING,preferExisting,estimated)
+            return previous != batteries.values.toList()
         }
 
-        fun setBattery(data: ByteArray) {
-            if (data.size != 22) {
-                return
+        @Synchronized fun setBattery(data: ByteArray) {
+            if (!isBatteryData(data)) return
+            // Resolve component IDs, not packet ordering. Ignore unknown component IDs.
+            for (offset in listOf(7,12,17)) {
+                val component=data[offset].toInt() and 0xff
+                val level=data[offset+2].toInt() and 0xff
+                val status=data[offset+3].toInt() and 0xff
+                update(component,level,status)
+                if (level in 0..100 && status in liveStatuses) preciseComponents.add(component)
+                else preciseComponents.remove(component)
             }
-//            first = if (data[10].toInt() == BatteryStatus.DISCONNECTED) {
-//                Battery(first.component, first.level, data[10].toInt())
-//            } else {
-//                Battery(data[7].toInt(), data[9].toInt(), data[10].toInt())
-//            }
-//            second = if (data[15].toInt() == BatteryStatus.DISCONNECTED) {
-//                Battery(second.component, second.level, data[15].toInt())
-//            } else {
-//                Battery(data[12].toInt(), data[14].toInt(), data[15].toInt())
-//            }
-//            case = if (data[20].toInt() == BatteryStatus.DISCONNECTED && case.status != BatteryStatus.DISCONNECTED) {
-//                Battery(case.component, case.level, data[20].toInt())
-//            } else {
-//                Battery(data[17].toInt(), data[19].toInt(), data[20].toInt())
-//            }
-//            sometimes it shows battery as -1%, just skip all that and set it normally
-            first = Battery(
-                data[7].toInt(), data[9].toInt(), data[10].toInt()
-            )
-            second = Battery(
-                data[12].toInt(), data[14].toInt(), data[15].toInt()
-            )
-            case = Battery(
-                data[17].toInt(), data[19].toInt(), data[20].toInt()
-            )
         }
 
-        fun getBattery(): List<Battery> {
-            val left = if (first.component == BatteryComponent.LEFT) first else second
-            val right = if (first.component == BatteryComponent.LEFT) second else first
-            return listOf(left, right, case)
-        }
+        @Synchronized fun getBattery(): List<Battery> = batteries.values.toList()
     }
 
     class ConversationalAwarenessNotification {

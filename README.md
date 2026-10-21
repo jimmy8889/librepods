@@ -280,3 +280,20 @@ If you see any misuse of the LibrePods name or logo, please report it to [me@kav
 The SF Pro font used in the Android app is the property of Apple Inc.. This will be removed in future versions of the app and replaced with an open alternative soon.
 
 AirPods, AirPods Pro, AirPods Max, and the AirPods logo are trademarks of Apple Inc. The LibrePods project is not affiliated with or endorsed by Apple Inc. in any way.
+
+
+### Personal Android v67 battery corrections (2026-10-12)
+
+Missing BLE and disconnected AACP readings remain unknown rather than becoming
+0%. Disconnected components retain a grey, explicitly last-reported reading when
+one exists. Byte values outside 0–100 are rejected, component IDs determine packet
+ordering, and a genuine connected 0% reading remains valid. BLE can fill a missing
+case value while precise AACP earbud readings retain priority. Coarse 10% BLE
+advertisements show `~`; decrypted 1% and AACP readings do not. Repeated identical
+BLE values no longer trigger repeated battery UI/broadcast updates.
+
+`assembleFossDebug`, 57 unit tests and `lintFossDebug` passed. The phone service
+exposes sanitized battery component/status diagnostics through `dumpsys activity
+service me.kavishdevar.librepods/.services.AirPodsService`. Unknown case readings
+still need a real case broadcast; software does not infer an unopened case's
+charge. Existing low-power scan mode and AirPods settings are preserved.

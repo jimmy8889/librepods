@@ -10,5 +10,5 @@ internal fun quickSettingsBatteryValue(batteries: List<Battery>, component: Int)
             BatteryStatus.CHARGING, BatteryStatus.NOT_CHARGING, BatteryStatus.OPTIMIZED_CHARGING
         )) return "—"
     val charging = if (battery.status == BatteryStatus.CHARGING) "⚡" else ""
-    return "$charging${battery.level}%"
+    return "$charging${if(battery.estimated)"~"else ""}${battery.level}%"
 }

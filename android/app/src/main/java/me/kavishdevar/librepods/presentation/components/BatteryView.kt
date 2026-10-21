@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,99 +49,33 @@ import me.kavishdevar.librepods.data.BatteryStatus
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Composable
-fun BatteryView(
-    batteryList: List<Battery>,
-    budsRes: Int,
-    caseRes: Int
-) {
+fun BatteryView(batteryList: List<Battery>, budsRes: Int, caseRes: Int) {
     val left = batteryList.find { it.component == BatteryComponent.LEFT }
     val right = batteryList.find { it.component == BatteryComponent.RIGHT }
     val case = batteryList.find { it.component == BatteryComponent.CASE }
-
-    val leftLevel = left?.level ?: 0
-    val rightLevel = right?.level ?: 0
-    val caseLevel = case?.level ?: 0
-
-    val singleDisplayed = remember { mutableStateOf(false) }
-
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            modifier = Modifier.widthIn(max = 500.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Image(
-                    bitmap = ImageBitmap.imageResource(budsRes),
-                    contentDescription = stringResource(R.string.buds),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                )
-
-                if (
-                    left?.status == right?.status &&
-                    (leftLevel - rightLevel) in -3..3
-                ) {
-                    BatteryIndicator(
-                        leftLevel.coerceAtMost(rightLevel),
-                        left?.status ?: BatteryStatus.NOT_CHARGING
-                    )
-                    singleDisplayed.value = true
+    val leftLevel = left?.level ?: -1
+    val rightLevel = right?.level ?: -1
+    val combined = leftLevel in 0..100 && rightLevel in 0..100 &&
+        left?.estimated == right?.estimated && left?.status == right?.status && (leftLevel - rightLevel) in -3..3
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Row(Modifier.widthIn(max = 500.dp), horizontalArrangement = Arrangement.Center) {
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(ImageBitmap.imageResource(budsRes), stringResource(R.string.buds),
+                    Modifier.fillMaxWidth().padding(8.dp))
+                if (combined) {
+                    BatteryIndicator(minOf(leftLevel,rightLevel),left?.status ?: BatteryStatus.DISCONNECTED,estimated=left?.estimated==true)
                 } else {
-                    singleDisplayed.value = false
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        if (leftLevel > 0 || left?.status != BatteryStatus.DISCONNECTED) {
-                            BatteryIndicator(
-                                leftLevel,
-                                left?.status ?: BatteryStatus.NOT_CHARGING,
-                                "\uDBC6\uDCE5"
-                            )
-                        }
-
-                        if (leftLevel > 0 && rightLevel > 0) {
-                            Spacer(modifier = Modifier.width(16.dp))
-                        }
-
-                        if (rightLevel > 0 || right?.status != BatteryStatus.DISCONNECTED) {
-                            BatteryIndicator(
-                                rightLevel,
-                                right?.status ?: BatteryStatus.NOT_CHARGING,
-                                "\uDBC6\uDCE8"
-                            )
-                        }
+                    Row(horizontalArrangement = Arrangement.Center) {
+                        BatteryIndicator(leftLevel,left?.status ?: BatteryStatus.DISCONNECTED,"L",estimated=left?.estimated==true)
+                        Spacer(Modifier.width(16.dp))
+                        BatteryIndicator(rightLevel,right?.status ?: BatteryStatus.DISCONNECTED,"R",estimated=right?.estimated==true)
                     }
                 }
             }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Image(
-                    bitmap = ImageBitmap.imageResource(caseRes),
-                    contentDescription = stringResource(R.string.case_alt),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                )
-
-                if (caseLevel > 0 || case?.status != BatteryStatus.DISCONNECTED) {
-                    BatteryIndicator(
-                        caseLevel,
-                        case?.status ?: BatteryStatus.NOT_CHARGING,
-                        prefix = if (!singleDisplayed.value) "\uDBC3\uDE6C" else ""
-                    )
-                }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(ImageBitmap.imageResource(caseRes), stringResource(R.string.case_alt),
+                    Modifier.fillMaxWidth().padding(8.dp))
+                BatteryIndicator(case?.level ?: -1,case?.status ?: BatteryStatus.DISCONNECTED,estimated=case?.estimated==true)
             }
         }
     }

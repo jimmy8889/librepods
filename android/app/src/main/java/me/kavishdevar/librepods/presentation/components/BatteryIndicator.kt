@@ -66,16 +66,20 @@ fun BatteryIndicator(
     status: Int,
     prefix: String = "",
     previousCharging: Boolean = false,
+    estimated: Boolean = false,
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     val batteryTextColor = if (isDarkTheme) Color.White else Color.Black
-    val batteryFillColor =
+    val known = batteryPercentage in 0..100
+    val displayedLevel = (if (estimated) "~" else "") + batteryPercentage + "%"
+    val available = known && status != BatteryStatus.DISCONNECTED
+    val batteryFillColor = if (!available) MaterialTheme.colorScheme.onSurfaceVariant else
         if (batteryPercentage > 25) if (isDarkTheme) Color(0xFF2ED158) else Color(0xFF35C759)
         else if (isDarkTheme) Color(0xFFFC4244) else Color(0xFFfe373C)
 
     val initialScale = if (previousCharging) 1f else 0f
     val scaleAnim = remember { Animatable(initialScale) }
-    val charging = status == BatteryStatus.CHARGING || status == BatteryStatus.OPTIMIZED_CHARGING
+    val charging = available && (status == BatteryStatus.CHARGING || status == BatteryStatus.OPTIMIZED_CHARGING)
     val targetScale = if (charging) 1f else 0f
 
     LaunchedEffect(previousCharging, charging) {
@@ -94,7 +98,7 @@ fun BatteryIndicator(
 
             val trackColor = if (isDarkTheme) Color(0xFF272728) else Color(0xFFE3E3E8)
             val optimizedLimit = 0.8f
-            val progress = batteryPercentage / 100f
+            val progress = if (known) batteryPercentage / 100f else 0f
 
             Canvas(modifier = Modifier.size(34.dp)) {
                 val startAngle = -90f
@@ -187,7 +191,7 @@ fun BatteryIndicator(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "$prefix $batteryPercentage%",
+            text = if (!known) "$prefix —" else if (!available) "$prefix $displayedLevel · last" else "$prefix $displayedLevel",
             color = batteryTextColor,
             style = TextStyle(
                 fontSize = 14.sp,

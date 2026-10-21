@@ -51,6 +51,7 @@ class BLEManager(private val context: Context) {
         val leftBattery: Int? = null,
         val rightBattery: Int? = null,
         val caseBattery: Int? = null,
+        val batteryPrecisionPercent: Int = 10,
         val isLeftInEar: Boolean = false,
         val isRightInEar: Boolean = false,
         val isLeftCharging: Boolean = false,
@@ -85,7 +86,6 @@ class BLEManager(private val context: Context) {
     private var lastBroadcastTime: Long = 0
     private val processedAddresses = mutableSetOf<String>()
 
-    private val lastValidCaseBatteryMap = mutableMapOf<String, Int>()
     private val modelNames = mapOf(
         0x0E20 to "AirPods Pro",
         0x1420 to "AirPods Pro 2",
@@ -263,10 +263,10 @@ class BLEManager(private val context: Context) {
         }
     }
 
-    private fun formatBattery(byteVal: Int): Pair<Boolean, Int> {
+    private fun formatBattery(byteVal: Int): Pair<Boolean, Int?> {
         val charging = (byteVal and 0x80) != 0
         val level = byteVal and 0x7F
-        return Pair(charging, level)
+        return Pair(charging && level in 0..100, level.takeIf { it in 0..100 })
     }
 
     private fun processScanResult(result: ScanResult) {
@@ -381,12 +381,7 @@ class BLEManager(private val context: Context) {
         val rawCaseBatteryByte = decrypted[3].toInt() and 0xFF
         val (isCaseCharging, rawCaseBattery) = formatBattery(rawCaseBatteryByte)
 
-        val caseBattery = if (rawCaseBatteryByte == 0xFF || (isCaseCharging && rawCaseBattery == 127)) {
-            lastValidCaseBatteryMap[address]
-        } else {
-            lastValidCaseBatteryMap[address] = rawCaseBattery
-            rawCaseBattery
-        }
+        val caseBattery = rawCaseBattery
 
         val lidOpen = ((lid shr 3) and 0x01) == 0
 
@@ -398,6 +393,7 @@ class BLEManager(private val context: Context) {
             leftBattery = leftBattery,
             rightBattery = rightBattery,
             caseBattery = caseBattery,
+            batteryPrecisionPercent = 1,
             isLeftInEar = isLeftInEar,
             isRightInEar = isRightInEar,
             isLeftCharging = isLeftCharging,
