@@ -16,8 +16,9 @@ import me.kavishdevar.librepods.data.XposedRemotePrefProvider
 import kotlin.math.roundToInt
 
 data class AppSettingsUiState(
-    val conversationalAwarenessPauseMusicEnabled: Boolean = false,
-    val relativeConversationalAwarenessVolumeEnabled: Boolean = true,
+    val showPhoneBatteryInWidget: Boolean = false,
+    val conversationAwarenessPauseMusicEnabled: Boolean = false,
+    val relativeConversationAwarenessVolumeEnabled: Boolean = true,
     val disconnectWhenNotWearing: Boolean = false,
     val takeoverWhenDisconnected: Boolean = false,
     val takeoverWhenIdle: Boolean = false,
@@ -26,7 +27,7 @@ data class AppSettingsUiState(
     val takeoverWhenRingingCall: Boolean = false,
     val takeoverWhenMediaStart: Boolean = false,
     val useAlternateHeadTrackingPackets: Boolean = true,
-    val conversationalAwarenessVolume: Float = 43f,
+    val conversationAwarenessVolume: Float = 43f,
     val showCameraDialog: Boolean = false,
     val cameraPackageValue: String = "",
     val cameraPackageError: String? = null,
@@ -136,8 +137,9 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 
         _uiState.update { currentState ->
             currentState.copy(
-                conversationalAwarenessPauseMusicEnabled = sharedPreferences.getBoolean("conversational_awareness_pause_music", false),
-                relativeConversationalAwarenessVolumeEnabled = sharedPreferences.getBoolean("relative_conversational_awareness_volume", true),
+                showPhoneBatteryInWidget = sharedPreferences.getBoolean("show_phone_battery_in_widget", false),
+                conversationAwarenessPauseMusicEnabled = sharedPreferences.getBoolean("conversational_awareness_pause_music", false),
+                relativeConversationAwarenessVolumeEnabled = sharedPreferences.getBoolean("relative_conversational_awareness_volume", true),
                 disconnectWhenNotWearing = sharedPreferences.getBoolean("disconnect_when_not_wearing", false),
                 takeoverWhenDisconnected = sharedPreferences.getBoolean("takeover_when_disconnected", false),
                 takeoverWhenIdle = sharedPreferences.getBoolean("takeover_when_idle", false),
@@ -146,7 +148,7 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
                 takeoverWhenRingingCall = sharedPreferences.getBoolean("takeover_when_ringing_call", false),
                 takeoverWhenMediaStart = sharedPreferences.getBoolean("takeover_when_media_start", false),
                 useAlternateHeadTrackingPackets = sharedPreferences.getBoolean("use_alternate_head_tracking_packets", true),
-                conversationalAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 43).toFloat(),
+                conversationAwarenessVolume = sharedPreferences.getInt("conversational_awareness_volume", 43).toFloat(),
                 cameraPackageValue = sharedPreferences.getString("custom_camera_package", "") ?: "",
                 vendorIdHook = xposedRemotePref.getBoolean("vendor_id_hook", false),
                 connectionSuccessful = sharedPreferences.getBoolean("connection_successful", false),
@@ -156,14 +158,19 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun setConversationalAwarenessPauseMusicEnabled(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean("conversational_awareness_pause_music", enabled) }
-        _uiState.update { it.copy(conversationalAwarenessPauseMusicEnabled = enabled) }
+    fun setShowPhoneBatteryInWidget(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("show_phone_battery_in_widget", enabled) }
+        _uiState.update { it.copy(showPhoneBatteryInWidget = enabled) }
     }
 
-    fun setRelativeConversationalAwarenessVolumeEnabled(enabled: Boolean) {
+    fun setConversationAwarenessPauseMusicEnabled(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("conversational_awareness_pause_music", enabled) }
+        _uiState.update { it.copy(conversationAwarenessPauseMusicEnabled = enabled) }
+    }
+
+    fun setRelativeConversationAwarenessVolumeEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean("relative_conversational_awareness_volume", enabled) }
-        _uiState.update { it.copy(relativeConversationalAwarenessVolumeEnabled = enabled) }
+        _uiState.update { it.copy(relativeConversationAwarenessVolumeEnabled = enabled) }
     }
 
     fun setDisconnectWhenNotWearing(enabled: Boolean) {
@@ -206,9 +213,9 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { it.copy(useAlternateHeadTrackingPackets = enabled) }
     }
 
-    fun setConversationalAwarenessVolume(volume: Float) {
+    fun setConversationAwarenessVolume(volume: Float) {
         sharedPreferences.edit { putInt("conversational_awareness_volume", volume.roundToInt()) }
-        _uiState.update { it.copy(conversationalAwarenessVolume = volume) }
+        _uiState.update { it.copy(conversationAwarenessVolume = volume) }
     }
 
     fun setShowCameraDialog(show: Boolean) {

@@ -158,11 +158,11 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
     data class ServiceConfig(
         var deviceName: String = "AirPods",
         var earDetectionEnabled: Boolean = true,
-        var conversationalAwarenessPauseMusic: Boolean = false,
-        var relativeConversationalAwarenessVolume: Boolean = true,
+        var conversationAwarenessPauseMusic: Boolean = false,
+        var relativeConversationAwarenessVolume: Boolean = true,
         var headGestures: Boolean = true,
         var disconnectWhenNotWearing: Boolean = false,
-        var conversationalAwarenessVolume: Int = 43,
+        var conversationAwarenessVolume: Int = 43,
         var qsClickBehavior: String = "cycle",
         var bleOnlyMode: Boolean = false,
 
@@ -1336,17 +1336,17 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
         config = ServiceConfig(
             deviceName = sharedPreferences.getString("name", "AirPods") ?: "AirPods",
             earDetectionEnabled = sharedPreferences.getBoolean("automatic_ear_detection", true),
-            conversationalAwarenessPauseMusic = sharedPreferences.getBoolean(
+            conversationAwarenessPauseMusic = sharedPreferences.getBoolean(
                 "conversational_awareness_pause_music", false
             ),
-            relativeConversationalAwarenessVolume = sharedPreferences.getBoolean(
+            relativeConversationAwarenessVolume = sharedPreferences.getBoolean(
                 "relative_conversational_awareness_volume", true
             ),
             headGestures = sharedPreferences.getBoolean("head_gestures", true),
             disconnectWhenNotWearing = sharedPreferences.getBoolean(
                 "disconnect_when_not_wearing", false
             ),
-            conversationalAwarenessVolume = sharedPreferences.getInt(
+            conversationAwarenessVolume = sharedPreferences.getInt(
                 "conversational_awareness_volume", 43
             ),
             qsClickBehavior = sharedPreferences.getString("qs_click_behavior", "cycle") ?: "cycle",
@@ -1449,17 +1449,17 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             "automatic_ear_detection" -> config.earDetectionEnabled =
                 preferences.getBoolean(key, true)
 
-            "conversational_awareness_pause_music" -> config.conversationalAwarenessPauseMusic =
+            "conversational_awareness_pause_music" -> config.conversationAwarenessPauseMusic =
                 preferences.getBoolean(key, false)
 
-            "relative_conversational_awareness_volume" -> config.relativeConversationalAwarenessVolume =
+            "relative_conversational_awareness_volume" -> config.relativeConversationAwarenessVolume =
                 preferences.getBoolean(key, true)
 
             "head_gestures" -> config.headGestures = preferences.getBoolean(key, true)
             "disconnect_when_not_wearing" -> config.disconnectWhenNotWearing =
                 preferences.getBoolean(key, false)
 
-            "conversational_awareness_volume" -> config.conversationalAwarenessVolume =
+            "conversational_awareness_volume" -> config.conversationAwarenessVolume =
                 preferences.getInt(key, 43)
 
             "qs_click_behavior" -> config.qsClickBehavior =
@@ -2059,10 +2059,6 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
             val instance = airpodsInstance
             if (instance != null) {
                 val metadataSet = SystemApisUtils.setMetadata(
-                    device,
-                    device.METADATA_MAIN_ICON,
-                    resToUri(instance.model.budCaseRes).toString().toByteArray()
-                ) && SystemApisUtils.setMetadata(
                     device, device.METADATA_MODEL_NAME, instance.model.name.toByteArray()
                 ) && SystemApisUtils.setMetadata(
                     device,
@@ -2678,7 +2674,7 @@ class AirPodsService : Service(), SharedPreferences.OnSharedPreferenceChangeList
 
     val batteryNotification = AirPodsNotifications.BatteryNotification()
     val conversationAwarenessNotification =
-        AirPodsNotifications.ConversationalAwarenessNotification()
+        AirPodsNotifications.ConversationAwarenessNotification()
 
     @Suppress("unused")
     fun setEarDetection(enabled: Boolean) {

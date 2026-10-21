@@ -204,14 +204,14 @@ class AirPodsNotifications {
         @Synchronized fun getBattery(): List<Battery> = batteries.values.toList()
     }
 
-    class ConversationalAwarenessNotification {
+    class ConversationAwarenessNotification {
         @Suppress("PrivatePropertyName")
         private val NOTIFICATION_PREFIX = Enums.CONVERSATION_AWARENESS_RECEIVE_PREFIX.value
 
         var status: Byte = 0
             private set
 
-        fun isConversationalAwarenessData(data: ByteArray): Boolean {
+        fun isConversationAwarenessData(data: ByteArray): Boolean {
             if (data.size != 10) {
                 return false
             }

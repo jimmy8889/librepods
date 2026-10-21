@@ -27,9 +27,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -46,6 +49,7 @@ import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.data.Battery
 import me.kavishdevar.librepods.data.BatteryComponent
 import me.kavishdevar.librepods.data.BatteryStatus
+import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Composable
@@ -91,16 +95,17 @@ fun BatteryViewPreview() {
     )
 
     val bg = if (isSystemInDarkTheme()) Color.Black else Color(0xFFF2F2F7)
-
-    Box(
-        modifier = Modifier
-            .background(bg)
-            .padding(16.dp)
-    ) {
-        BatteryView(
-            batteryList = fakeBattery,
-            budsRes = R.drawable.airpods_pro_2_buds,
-            caseRes = R.drawable.airpods_pro_2_case
-        )
+    LibrePodsTheme(m3eEnabled = false) {
+        Box(
+            modifier = Modifier
+                .background(bg)
+                .padding(16.dp)
+        ) {
+            BatteryView(
+                batteryList = fakeBattery,
+                budsRes = R.drawable.airpods_5_wireless_buds,
+                caseRes = R.drawable.airpods_5_wireless_case
+            )
+        }
     }
 }
